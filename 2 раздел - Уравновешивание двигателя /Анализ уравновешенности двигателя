@@ -1,0 +1,379 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+P1=6604
+P2=1961
+Pc=12270
+gamma=90  # Угол развала цилиндров
+gammar=np.radians(gamma)  # Преобразование в радианы
+lambd=0.297  # отношение длины кривошипа к длине шатуна
+z=0.09 #Расстояние между V-бразными секциями
+D=0.083  # Диаметр поршня(м)
+S=0.0914  # Ход поршня(м)
+L=0.154  # Длина шатуна (м)
+R=0.0457  # Радиус кривошипа (м)
+n=4000  # Номинальная частота вращения (об/мин)
+Dk=0.068 # Диаметр коренной шейки (м)
+Dsh=0.059 # Диаметр шатунной шейки (м)
+lk=0.026 # Длинна коренной шейки (м)
+lsh=0.022 # Длинна шатунной шейки (м)
+omega=(2*np.pi*n)/60  # Угловая скорость (рад/с)
+gammaik=120 # Чередование вспышек (град)
+gammaikr=np.radians(gammaik)  # Преобразование в радианы
+i=6  # Число цилиндров
+tau=4  # Тактность
+alpha=0 # Текущий угол поворота коленчатого вала (град)
+alpha =np.radians(alpha)# Преобразование в радианы
+m=191 # Масса двигателя (кг)
+ld=0.062 # Длина двигателя (м)
+bd=0.072 # Ширина двигателя (м)
+hd=0.083 # Высота двигателя (м)
+mpd=0.823 # Суммарная масса поступательно движущихся частей КШМ
+Mpd=190.9 # Масса поступательно движущихся частей отнесенная к площади поршня
+mvr=1.53 # Масса вращающихся частей
+Mvr=283.17 # Масса вращающихся частей отнесенная к площади поршня
+ac=0.239 # Расстояние между противовесами Mc
+r=0.005 # Радиус галтелей
+ro=7850 # Плотность материала противовеса
+Ap=(np.pi*D**2)/4 # Площадь поршня
+# списки для хранения
+Rj1x_values = []
+Rj1y_values = []
+Rj1_values = []
+Rj2x_values = []
+Rj2y_values = []
+Rj2_values = []
+Rcx_values = []
+Rcy_values = []
+Rc_values = []
+Mj1x_values=[]
+Mj1y_values=[]
+Mj1_values=[]
+Mj2x_values=[]
+Mj2y_values=[]
+Mj2_values=[]
+Mcx_values=[]
+Mcy_values=[]
+Mc_values=[]
+Rj1sum=0
+Rj2sum=0
+Rcsum=0
+Mj1sum=0
+Mj2sum=0
+Mcsum=0
+
+Rj1max=0
+Rj2max=0
+Rcmax=0
+Mj1max=0
+Mj2max=0
+Mcmax=0
+
+Mj1xmax=0
+Mj1ymax=0
+Mj2xmax=0
+Mj2ymax=0
+Mcxmax=0
+Mcymax=0
+
+#Проекции главного вектора сил инерции ПДМ 1-го порядка
+
+for alpha in range(0,720):
+  alphar=np.radians(alpha)# Преобразование в радианы
+  Rj1x=np.sin(gammar/2)*(-(
+    np.cos(alphar)+
+    np.cos(alphar+gammaikr)+
+    np.cos(alphar+2*gammaikr))+(
+    np.cos(alphar-gammar)+
+    np.cos(alphar-gammar+gammaikr)+
+    np.cos(alphar-gammar+2*gammaikr)))
+  Rj1y=np.cos(gammar/2)*(-(
+    np.cos(alphar)+
+    np.cos(alphar+gammaikr)+
+    np.cos(alphar+2*gammaikr))+(
+    np.cos(alphar-gammar)+
+    np.cos(alphar-gammar+gammaikr)+
+    np.cos(alphar-gammar+2*gammaikr)))
+  Rj1=np.sqrt((Rj1x)**2+(Rj1y)**2)
+  Rj1x_values.append(Rj1x)
+  Rj1y_values.append(Rj1y)
+  Rj1_values.append(Rj1)
+  Rj1sum+=Rj1
+  if abs(Rj1)>Rj1max:
+      Rj1max=abs(Rj1)
+# Построение графика
+plt.figure(figsize=(10, 6))
+plt.plot(Rj1x_values, Rj1y_values, label='Проекции Rj1', color='b')
+plt.title('График проекций PDM 1-го порядка')
+plt.xlabel('Rj1x')
+plt.ylabel('Rj1y')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.axis('equal')  # Соотношение осей
+plt.show()
+
+#Проекции главного вектора сил инерции ПДМ 2-го порядка
+
+for alpha in range (0,720):
+  alphar=np.radians(alpha)
+  Rj2x=np.sin(gammar/2)*(-(
+    np.cos(2*alphar)+
+    np.cos(2*(alphar + gammaikr))+
+    np.cos(2*(alphar+2*gammaikr))+(
+    np.cos(2*(alphar-gammar))+
+    np.cos(2*(alphar-gammar+gammaikr))+
+    np.cos(2*(alphar-gammar+2*gammaikr)))))
+  Rj2y=np.cos(gammar/2)*(-(
+    np.cos(2*alphar)+
+    np.cos(2*(alphar+gammaikr))+
+    np.cos(2*(alphar+2*gammaikr)))+(
+    np.cos(2*(alphar-gammar))+
+    np.cos(2*(alphar-gammar+gammaikr))+
+    np.cos(2*(alphar-gammar+2*gammaikr))))
+  Rj2 = np.sqrt((Rj2x) ** 2 + (Rj2y) ** 2)
+  Rj2x_values.append(Rj2x)
+  Rj2y_values.append(Rj2y)
+  Rj2_values.append(Rj2)
+  Rj2sum+=Rj2
+  if abs(Rj2)>Rj2max:
+      Rj2max=abs(Rj2)
+# Построение графика
+plt.figure(figsize=(10, 6))
+plt.plot(Rj2x_values, Rj2y_values, label='Проекции Rj2', color='r')
+plt.title('График проекций PDM 2-го порядка')
+plt.xlabel('Rj2x')
+plt.ylabel('Rj2y')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.axis('equal')  # Соотношение осей
+plt.show()
+
+# Проекции главного вектора центробежных сил инерции
+
+for alpha in range (0,720):
+  alphar=np.radians(alpha)
+  Rcx=np.sin(alphar-gammar/2)+np.sin(alphar-(gammar/2)+gammaikr)+np.sin(alphar-(gammar/2)+2*gammaikr)
+  Rcy=np.cos(alphar-gammar/2)+np.cos(alphar-(gammar/2)+gammaikr)+np.cos(alphar-(gammar/2)+2*gammaikr)
+  Rc=np.sqrt((Rcx**2)+(Rcy**2))
+  Rcx_values.append(Rcx)
+  Rcy_values.append(Rcy)
+  Rc_values.append(Rc)
+  Rcsum+=Rc
+  if abs(Rc)>Rcmax:
+    Rcmax=abs(Rc)
+# Построение графика
+plt.figure(figsize=(10, 6))
+plt.plot(Rcx_values, Rcy_values, label='Проекции Rc', color='y')
+plt.title('График проекций главного вектора центробежных сил инерции')
+plt.xlabel('Rcx')
+plt.ylabel('Rcy')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.axis('equal')  # Соотношение осей
+plt.show()
+
+#Проекции момента сил инерции ПДМ 1-го порядка относительно координатных осей:
+
+for alpha in range (0,720):
+  alphar = np.radians(alpha)
+  Mj1x=P1*np.cos(gammar/2)*(
+      (-z-0.011)*np.cos(alphar)+
+      (-0.011)*np.cos(alphar+gammaikr)+
+      (+z-0.011)*np.cos(alphar+2*gammaikr)+
+      (-z+0.011)*np.cos(alphar-gammar)+
+      (0.011)*np.cos(alphar-gammar+gammaikr)+
+      (+z+0.011)*np.cos(alphar-gammar+2*gammaikr))
+  if abs(Mj1x)>Mj1xmax:
+      Mj1xmax=abs(Mj1x)
+  Mj1y=P1*np.sin(gammar/2)*(-(
+      (-z-0.011)*np.cos(alphar)+
+      (-0.011)*np.cos(alphar+gammaikr)+
+      (+z-0.011)*np.cos(alphar+2*gammaikr))+
+      (-z+0.011)*np.cos(alphar-gammar)+
+      (0.011)*np.cos(alphar-gammar+gammaikr)+
+      (+z+0.011)*np.cos(alphar-gammar+2*gammaikr))
+  if abs(Mj1y)>Mj1ymax:
+      Mj1ymax=abs(Mj1y)
+  Mj1=np.sqrt((Mj1x**2)+(Mj1y**2))
+  Mj1x_values.append(Mj1x)
+  Mj1y_values.append(Mj1y)
+  Mj1_values.append(Mj1)
+  Mj1sum+=Mj1
+  if abs(Mj1)>Mj1max:
+      Mj1max=abs(Mj1)
+      
+  if Mj1y < -1029.4:
+      print(alpha,'(',round(Mj1x,1),';',round(Mj1y,1),')', '-Mpj1')
+  if Mj1y > 1029.4:
+      print(alpha,'(',round(Mj1x,1),';',round(Mj1y,1),')', '+Mpj1')
+  if Mj1x < -1029.4:
+      print(alpha,'(',round(Mj1x,1),';',round(Mj1y,1),')', '-Mpj1')
+  if Mj1x > 1029.4:
+      print(alpha,'(',round(Mj1x,1),';',round(Mj1y,1),')', '+Mpj1')
+      
+# Построение графика
+plt.figure(figsize=(10, 6))
+plt.plot(Mj1x_values, Mj1y_values, label='Проекции Mj1 ', color='y')
+plt.title('Проекции момента сил инерции ПДМ 1-го порядка')
+plt.xlabel('Mj1x')
+plt.ylabel('Mj1y')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.axis('equal')  # Соотношение осей
+plt.show()
+
+#Проекции момента сил инерции ПДМ 2-го порядка относительно координатных осей:
+
+for alpha in range (0,720):
+  alphar = np.radians(alpha)
+  Mj2x=P2*np.cos(gammar/2)*(
+      (-z-0.011)*np.cos(2*(alphar))+
+      (-0.011)*np.cos(2*(alphar+gammaikr))+
+      (+z-0.011)*np.cos(2*(alphar+2*gammaikr))+
+      (-z+0.011)*np.cos(2*(alphar-gammar))+
+      (0.011)*np.cos(2*(alphar-gammar+gammaikr))+
+      (+z+0.011)*np.cos(2*(alphar-gammar+2*gammaikr)))
+  if abs(Mj2x)>Mj2xmax:
+    Mj2xmax=abs(Mj2x)
+  Mj2y=P2*np.sin(gammar/2)*(-(
+      (-z-0.011)*np.cos(2*(alphar))+
+      (-0.011)*np.cos(2*(alphar+gammaikr))+
+      (+z-0.011)*np.cos(2*(alphar+2*gammaikr)))+
+      (-z+0.011)*np.cos(2*(alphar-gammar))+
+      (0.011)*np.cos(2*(alphar-gammar+gammaikr))+
+      (+z+0.011)*np.cos(2*(alphar-gammar+2*gammaikr)))
+  if abs(Mj2y)>Mj2ymax:
+    Mj2ymax=abs(Mj2y)
+  Mj2=np.sqrt((Mj2x**2)+(Mj2y**2))
+  Mj2x_values.append(Mj2x)
+  Mj2y_values.append(Mj2y)
+  Mj2_values.append(Mj2)
+  Mj2sum+=Mj2
+  if abs(Mj2)>Mj2max:
+      Mj2max=abs(Mj2)
+
+  if Mj2y < -432.3:
+      print(alpha,'(',round(Mj2x,1),';',round(Mj2y,1),')', '-Mpj2')
+  if Mj2y > 432.3:
+      print(alpha,'(',round(Mj2x,1),';',round(Mj2y,1),')', '+Mpj2')
+  if Mj2x < -432.3:
+      print(alpha,'(',round(Mj2x,1),';',round(Mj2y,1),')', '-Mpj2')
+  if Mj2x > 432.3:
+      print(alpha,'(',round(Mj2x,1),';',round(Mj2y,1),')', '+Mpj2')
+      
+# Построение графика
+plt.figure(figsize=(10, 6))
+plt.plot(Mj2x_values, Mj2y_values, label='Проекции Mj2', color='y')
+plt.title('Проекции момента сил инерции ПДМ 2-го порядка')
+plt.xlabel('Mj2x')
+plt.ylabel('Mj2y')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.axis('equal')  # Соотношение осей
+plt.show()
+    
+#Проекции центробежного момента сил инерции  относительно координатных осей:
+
+for alpha in range (0,720):
+  alphar = np.radians(alpha)
+  Mcx=Pc*(
+     (-z-0.011)*np.cos(alphar-gammar/2)+
+     (-0.011)*np.cos(alphar-gammar/2+gammaikr)+
+     (+z-0.011)*np.cos(alphar-gammar/2+2*gammaikr))
+  if abs(Mcx)>Mcxmax:
+      Mcxmax=abs(Mcx)
+  Mcy=Pc*(
+     (-z-0.011)*np.sin(alphar-gammar/2)+
+     (-0.011)*np.sin(alphar-gammar/2+gammaikr)+
+     (+z-0.011)*np.sin(alphar-gammar/2+2*gammaikr))
+  if abs(Mcy)>Mcymax:
+      Mcymax=abs(Mcy)
+  Mc=np.sqrt((Mcx**2)+(Mcy**2))
+  Mcx_values.append(Mcx)
+  Mcy_values.append(Mcy)
+  Mc_values.append(Mc)
+  Mcsum+=Mc
+  if abs(Mc)>Mcmax:
+      Mcmax=abs(Mc)
+
+  if Mcy < -1912.6:
+      print(alpha,'(',round(Mcx,1),';',round(Mcy,1),')', '-Mc')
+  if Mcy > 1912.6:
+      print(alpha,'(',round(Mcx,1),';',round(Mcy,1),')', '+Mc')
+  if Mcx < -1912.6:
+      print(alpha,'(',round(Mcx,1),';',round(Mcy,1),')', '-Mc')
+  if Mcx > 1912.6:
+      print(alpha,'(',round(Mcx,1),';',round(Mcy,1),')', '+Mc')
+      
+plt.figure(figsize=(10, 6))
+plt.plot(Mcx_values, Mcy_values, label='Проекции Mc', color='b')
+plt.title('Проекции центробежного момента сил инерции')
+plt.xlabel('Mсx')
+plt.ylabel('Mсy')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.axis('equal')  # Соотношение осей
+plt.show()
+
+# Вывод суммарных значений
+
+print('Суммарные моменты:')
+#print('Rj1 = '+ str(round(Rj1sum), 2)+ ' ≈ 0')
+#print('Rj2 = '+ str(round(Rj2sum), 2)+ ' ≈ 0')
+#print('Rc = '+ str(round(Rcsum), 2)+ ' ≈ 0')
+print('Mj1 =', round(np.sqrt(Mj1xmax**2 + Mj1ymax**2)), 2)
+print('Mj2 =', round(np.sqrt(Mj2xmax**2 + Mj2ymax**2)), 2)
+print('Mc =', round(np.sqrt(Mcxmax**2 + Mcymax**2)), 2)
+print()
+
+# Вывод амплитуд
+
+print('Амплитуды:')
+print('Rj1 = '+ str(round(Rj1max, 2))+ ' ≈ 0')
+print('Rj2 = '+ str(round(Rj2max, 2))+ ' ≈ 0')
+print('Rc = '+ str(round(Rcmax, 2))+ ' ≈ 0')
+print('Mj1 = '+ str(round(Mj1max, 2)))
+print('Mj2 = '+ str(round(Mj2max, 2)))
+print('Mc = '+ str(round(Mcmax, 2)))
+print('Mj1x = '+ str(round(Mj1xmax, 2)))
+print('Mj1y = '+ str(round(Mj1ymax, 2)))
+print('Mcx = '+ str(round(Mcxmax, 2)))
+print('Mcy = '+ str(round(Mcymax, 2)))
+print()
+
+# Проверка суммарных моментов
+
+print('Проверка суммарных моментов')
+Kc=round(mvr*omega**2*S/2, 3)
+Kj=round(mpd*omega**2*S/2, 3)
+print('Kc = '+str(Kc))
+print('Kl = '+str(Kj))
+prMc=round(Mcmax/(Kc*z), 3)
+prMj1=round(Mj1max/(Kj*z), 3)
+prMj2=round(Mj2max/(Kj*lambd*z), 3)
+print('ΣMj1 = '+str(prMj1))
+print('ΣMj2 = '+str(prMj2))
+print('ΣMc = '+str(prMc))
+print()
+
+# Критерий Стечкина-Каца
+
+print('Критерии Стечкина-Каца')
+ksi=round(1/(m*D*omega**2)*(0+0.25*0+((6*ld)/(ld**2+hd**2))*(Mj1max+0.25*Mj2max)), 6)
+print('ξ = '+ str(ksi))
+eta=round(1/(m*omega**2*D)*(Rcmax+((6*ld)/m*omega**2*D*(ld**2+bd**2))*Mcmax), 6)
+print('η = '+ str(eta))
+print()
