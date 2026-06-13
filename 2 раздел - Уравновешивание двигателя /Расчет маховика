@@ -1,0 +1,230 @@
+# Расчет маховика
+def read_excel_second_column(file_path):
+    try:
+        # Читаем Excel файл
+        df = pd.read_excel(file_path)
+        # Получаем значения из второго столбца (индекс 1)
+        second_column_values = df.iloc[:, 1].tolist()
+        second_column_values = [x * 100000 for x in second_column_values]
+        # Проверяем количество элементов
+        #print(f"Количество элементов в списке: {len(second_column_values)}")
+        return second_column_values
+        
+    except FileNotFoundError:
+        print(f"Файл {file_path} не найден")
+        return []
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+        return []
+# Использование
+file_path = r'C:\Users\maxim\OneDrive\Документы\Курсач ТПКД\Индикаторная диаграмма.xlsx'
+Pg_values = read_excel_second_column(file_path)
+
+#Выводим первые 5 значений для проверки
+#print("Первые 5 значений:", values_list[:5])
+
+integral = 0
+Akr_values = []
+As_values = []
+Aizb_values = []
+Mkr_values = []
+Ms_values=[]
+Pj_values = []
+Ps_values = []
+N_values = []
+K_values = []
+Z_values = []
+T_values = []
+f=0
+
+for alpha in range (0, 720):
+    alpha = np.deg2rad(alpha)
+    beta = np.arcsin(lambd*np.sin(alpha))
+    Jp = R*(omega**2)*((np.cos(alpha+beta)/np.cos(beta))+(lambd*(np.cos(alpha)**2))/(np.cos(beta))**3)
+    Pj = -Mpd*Jp
+    Pj_values.append(Pj)
+    Ps = (Pj)+Pg_values[f]
+    Ps_values.append(Ps)
+    f+=1
+    N = Ps*np.tan(beta)
+    N_values.append(N)
+    K = Ps/np.cos(beta)
+    K_values.append(K)
+    Z = K*np.cos(alpha+beta)
+    Z_values.append(Z)
+    T = K*np.sin(alpha+beta)
+    T_values.append(T)
+    Mkr = T*Ap*R
+    Mkr_values.append(Mkr)
+    integral+=Mkr
+Ms = integral/720
+# Построение графика сил
+
+plt.figure(figsize=(10, 6))
+plt.plot(N_values, label='N', color='r')
+plt.plot(K_values, label='K', color='g')
+plt.title('Силы N, K')
+plt.xlabel('α')
+plt.ylabel('Па')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.show()    
+
+
+plt.figure(figsize=(10, 6))
+plt.plot(Z_values, label='Z', color='r')
+plt.plot(T_values, label='T', color='g')
+plt.title('Силы Z, T')
+plt.xlabel('α')
+plt.ylabel('Па')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.show() 
+
+# Построение графика давлений
+
+plt.figure(figsize=(10, 6))
+plt.plot(Pg_values, label='Pг', color='r')
+plt.plot(Pj_values, label='Pj', color='g')
+plt.plot(Ps_values, label='Ps', color='b')
+plt.title('Давления')
+plt.xlabel('α')
+plt.ylabel('Па')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.show()
+
+# Построение графика Мкр, Мс
+
+shifts = [0, 120, 240, 360, 480, 600]
+colors_mkr = ['green', 'lightgreen', 'green', 'darkgreen', 'lime', 'forestgreen']
+
+for i, shift in enumerate(shifts):
+    # Сдвигаем данные (циклический сдвиг)
+    Mkr_shifted = Mkr_values[shift:] + Mkr_values[:shift]
+    plt.plot(Mkr_shifted, label=f'Мкр {i+1}'+' цилиндра', color=colors_mkr[i], alpha=0.6, linestyle='--')
+plt.plot(Ms_values, label=f'Мс = {round(Ms,2)}', color='r')
+plt.title('Крутящий момент и момент сопротивления')
+plt.xlabel('α')
+plt.ylabel('Н*м')
+plt.grid(True, alpha=0.3)
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.tight_layout()
+plt.show()
+
+
+sum_Mkr = np.zeros(len(Mkr_values))
+
+shifts = [0, 120, 240, 360, 480, 600]
+colors_mkr = ['green', 'lightgreen', 'green', 'darkgreen', 'lime', 'forestgreen']
+
+# Сначала суммируем все значения
+for i, shift in enumerate(shifts):
+    # Сдвигаем данные (циклический сдвиг)
+    Mkr_shifted = Mkr_values[shift:] + Mkr_values[:shift]
+    sum_Mkr += np.array(Mkr_shifted)
+    
+integral = 0    
+for alpha in range(0,720):
+    integral += sum_Mkr[alpha]
+Ms = integral/720
+Ms_values=[]
+for x in range(0, 720):
+    Ms_values.append(Ms)
+    
+# Строим график суммы
+plt.figure(figsize=(12, 6))
+plt.plot(sum_Mkr, label='Суммарный Мкр (6 цилиндров)', color='blue', linewidth=2)
+plt.plot(Ms_values, label='Мс', color='r', linewidth=2)
+plt.title('Суммарный крутящий момент и момент сопротивления')
+plt.xlabel('α')
+plt.ylabel('Н*м')
+plt.grid(True, alpha=0.3)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.tight_layout()
+plt.show()
+
+# Работы
+Akr = 0
+As = 0
+Aizb = 0
+Amax = 0
+Amin = 100000
+Amax_deg = 0
+Amin_deg = 0
+
+for alpha in range(0, 720):
+    Akr += sum_Mkr[alpha]*np.radians(1)
+    As += Ms_values[alpha]*np.radians(1)
+    Aizb += (sum_Mkr[alpha]-Ms_values[alpha])*np.radians(1)
+    Akr_values.append(Akr)
+    As_values.append(As)
+    Aizb_values.append(Aizb)
+for alpha in range(0, 100):
+    if Aizb_values[alpha]>Amax:
+        Amax = Aizb_values[alpha]
+        Amax_deg = alpha
+for alpha in range(100, 200):
+    if Aizb_values[alpha]<Amin:
+        Amin = Aizb_values[alpha]
+        Amin_deg = alpha
+
+# График работ
+
+plt.figure(figsize=(10, 6))
+plt.plot(Akr_values, label='Акр', color='r')
+plt.plot(As_values, label='Ас', color='g')
+plt.plot(Aizb_values, label='Аизб', color='b')
+name1 = 'Amax = ' + str(round(Amax, 0)) + '; α = '+ str(Amax_deg)+'°'
+name2 = 'Amin = ' + str(round(Amin, 0)) + '; α = '+ str(Amin_deg)+'°'
+plt.axvline(Amax_deg, color='red', linestyle='--', linewidth=2, label=name1)
+plt.axvline(Amin_deg, color='red', linestyle='--', linewidth=2, label=name2)
+plt.title('Работы')
+plt.xlabel('α')
+plt.ylabel('Дж')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.show()
+
+# Момент инерции всех вращающихся и приведенных к оси вращения коленвала масс
+
+deltam = 0.01
+Imm1=0.0132
+Imm2=0.011
+Imm3=0.011
+Io = 0
+for alpha in range(Amax_deg, Amin_deg):
+    Io += sum_Mkr[alpha]*np.radians(1)-Ms_values[alpha]*np.radians(1)
+Io = Io/(deltam*(omega**2))
+print(Io)
+Imax = Io-2*(Imm1+Imm2+Imm3)
+print('Момент инерции маховика =', round(abs(Imax),3))
+for Dmax in range(1, 300):
+    Dmax = Dmax * 0.001
+    #print(ro*np.pi*0.125*Dmax*(((Dmax/2)**2)-(((0.15*Dmax)/2)**2))*((Dmax/2)**2))
+    if (abs(Imax+(ro*np.pi*0.125*Dmax*(((Dmax/2)**2)-(((0.15*Dmax)/2)**2))*((Dmax/2)**2)))) < 0.003:
+        Dm = Dmax
+        print('Dmax =',Dmax)
+
+Vmax = np.pi*0.125*Dm*(((Dm/2)**2)-(((0.15*D)/2)**2))*(Dm/2)**2
+print('Vmax =', round(Vmax*10**9, 0))
+d1m = 0.15*Dm*1000
+d2m = 0.25*Dm*1000
+d3m = 0.525*Dm*1000
+bm = 0.125*Dm*1000
+bst = 1.05*bm
+bd = (1/3)*bm
+print('d1 =', round(d1m,3),'; d2 =', round(d2m,3),'; d3 =', round(d3m,3),'; b =', round(bm,3),'; bst =', round(bst,3), '; bd =', round(bd,3))
