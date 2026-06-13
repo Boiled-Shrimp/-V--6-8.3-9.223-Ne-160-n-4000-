@@ -1,0 +1,446 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# ============================================================================
+# НАСТРОЙКИ ОГРАНИЧЕНИЙ ПО ОСИ Y ДЛЯ КАЖДОГО ГРАФИКА
+# ============================================================================
+# Здесь можно задать индивидуальные ограничения для каждого графика
+# Формат: (минимальное_значение, максимальное_значение)
+# Если для какого-то графика не задано ограничение, будет использоваться автоподбор
+
+# Ограничения для графиков в сетке
+y_limits_grid = [
+    # График 1: (y_min, y_max)
+    (-1.2, 1.2),    # График 1
+    (-75, 75),    # График 2  
+    (-50, 50),    # График 3
+    (-10, 10),    # График 4
+    (-50, 50),    # График 5
+    (-1.1, 1.1),    # График 6
+    (-0.9, 0.9),    # График 7
+    (-1.3, 1.3),    # График 8
+    (-0.7, 0.7),    # График 9
+    (-1.4, 1.4),    # График 10
+    (-0.5, 0.5),    # График 11
+]
+
+# Ограничения для отдельных графиков
+y_limits_individual = [
+    # График 1: (y_min, y_max)
+    (-1.2, 1.2),    # График 1
+    (-75, 75),    # График 2  
+    (-50, 50),    # График 3
+    (-10, 10),    # График 4
+    (-50, 50),    # График 5
+    (-1.1, 1.1),    # График 6
+    (-0.9, 0.9),    # График 7
+    (-1.3, 1.3),    # График 8
+    (-0.7, 0.7),    # График 9
+    (-1.4, 1.4),    # График 10
+    (-0.5, 0.5),    # График 11
+]
+
+# ============================================================================
+
+# Нахождение частот собственных колебаний
+# Моменты инерции из таблицы
+I_1 = 0.001149
+I_2 = 0.0132
+I_3 = 0.011
+I_4 = 0.011
+I_5 = 0.011
+I_6 = 0.011
+I_7 = 0.0132
+I_8 = 0.306
+I_9 = 0.0142867
+I_10 = 0.008
+I_11 = 0.00724
+I_12 = 0.0195
+I_13 = 0.457
+I_14 = 23.74
+
+# Коэффициенты жёсткости участков из таблицы
+c_12 = 116.754 * 10**3
+c_23 = 1030.67 * 10**3
+c_34 = 915.531 * 10**3
+c_45 = 1030.67 * 10**3
+c_56 = 915.531 * 10**3
+c_67 = 1030.67 * 10**3
+c_78 = 756.473 * 10**3
+c_89 = 19332.6 * 10**3
+c_910 = 16.771 * 10**3
+c_1011 = 35.81 * 10**3
+c_1112 = 1.683 * 10**3
+c_1213 = 13.207 * 10**3
+c_1314 = 10.963 * 10**3
+
+# Увеличиваем диапазон для поиска частот до 12000
+omega_c = np.arange(0, 20000)  # От 0 до 12000
+a_1 = 1
+a_2 = a_1 - I_1 * a_1 * omega_c**2 / c_12
+a_3 = a_2 - (I_1 * a_1 + I_2 * a_2) * omega_c**2 / c_23
+a_4 = a_3 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3) * omega_c**2 / c_34
+a_5 = a_4 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4) * omega_c**2 / c_45
+a_6 = a_5 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5) * omega_c**2 / c_56
+a_7 = a_6 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6) * omega_c**2 / c_67
+a_8 = a_7 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7) * omega_c**2 / c_78
+a_9 = a_8 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7 + I_8 * a_8) * omega_c**2 / c_89
+a_10 = a_9 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7 + I_8 * a_8 + I_9 * a_9) * omega_c**2 / c_910
+a_11 = a_10 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7 + I_8 * a_8 + I_9 * a_9 + I_10 * a_10) * omega_c**2 / c_1011
+a_12 = a_11 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7 + I_8 * a_8 + I_9 * a_9 + I_10 * a_10 + I_11 * a_11) * omega_c**2 / c_1112
+a_13 = a_12 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7 + I_8 * a_8 + I_9 * a_9 + I_10 * a_10 + I_11 * a_11 + I_12 * a_12) * omega_c**2 / c_1213
+a_14 = a_13 - (I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7 + I_8 * a_8 + I_9 * a_9 + I_10 * a_10 + I_11 * a_11 + I_12 * a_12 + I_13 * a_13) * omega_c**2 / c_1314
+
+# Если R(omega_c) = 0, то omega_c - собственная частота
+R = I_1 * a_1 + I_2 * a_2 + I_3 * a_3 + I_4 * a_4 + I_5 * a_5 + I_6 * a_6 + I_7 * a_7 + I_8 * a_8 + I_9 * a_9 + I_10 * a_10 + I_11 * a_11 + I_12 * a_12 + I_13 * a_13 + I_14 * a_14
+
+# Ищем все собственные частоты (для 14 масс может быть до 14 частот)
+max_freq = 14  # Максимальное количество собственных частот
+omega_a = np.zeros(max_freq)
+j = 0
+for i in range(1, len(omega_c)):  # Начинаем с 1, так как i-1 будет 0
+    if R[i] <= 0 and R[i-1] >= 0:
+        j = j + 1
+        if j <= max_freq:  # Защита от выхода за границы массива
+            omega_a[j-1] = i
+    if R[i] >= 0 and R[i-1] <= 0:
+        j = j + 1
+        if j <= max_freq:  # Защита от выхода за границы массива
+            omega_a[j-1] = i
+
+# Обрезаем массив до фактического количества найденных частот
+omega_a = omega_a[:j]
+
+print(f"Найдено {j} собственных частот:")
+print("Индексы частот:", omega_a)
+print("Значения частот (рад/с):", omega_a)  # omega_c[индекс] даст значение частоты
+
+# Создаем матрицу амплитуд для всех найденных частот
+a_all = np.zeros((14, j))  # 14 масс x j частот
+
+# Заполняем матрицу амплитуд
+for freq_idx in range(j):
+    idx = int(omega_a[freq_idx]) - 1  # Индексация в Python начинается с 0
+    if idx < len(omega_c):  # Проверка на корректность индекса
+        a_all[:, freq_idx] = [
+            a_1, 
+            a_2[idx], 
+            a_3[idx], 
+            a_4[idx], 
+            a_5[idx], 
+            a_6[idx], 
+            a_7[idx], 
+            a_8[idx], 
+            a_9[idx], 
+            a_10[idx], 
+            a_11[idx], 
+            a_12[idx], 
+            a_13[idx], 
+            a_14[idx]
+        ]
+
+print(f"\nМатрица амплитуд (14 x {j}):")
+print(a_all)
+
+# График для нахождения собственных частот
+plt.figure(figsize=(12, 7))
+plt.plot(omega_c, R, color='green')
+plt.grid(True)
+
+# Отмечаем найденные собственные частоты
+for i in range(j):
+    freq_idx = int(omega_a[i]) - 1
+    if freq_idx < len(omega_c):
+        plt.axvline(x=omega_c[freq_idx], color='red', linestyle='--', alpha=0.5)
+        plt.text(omega_c[freq_idx], max(R)*0.9, f'ω{i+1}', 
+                horizontalalignment='center', fontsize=10)
+
+plt.title(r'$\bf{R=f(\omega_c)}$', fontsize=14, fontname='Times New Roman')
+plt.xlabel(r'$\omega_c, рад/с$', fontsize=14, fontname='Times New Roman')
+plt.ylabel(r'$R=f(\omega_c)$', fontsize=14, fontname='Times New Roman')
+plt.autoscale(enable=True, axis='both', tight=None)
+plt.tight_layout()
+plt.show()
+
+# Графики форм колебаний
+plt.figure(figsize=(12, 7))
+mass_numbers = np.arange(1, 15)  # Номера масс от 1 до 14
+
+for i in range(j):
+    plt.plot(mass_numbers, a_all[:, i], marker='o', linewidth=2)
+
+# Создаем легенду для найденных частот
+legend_labels = [f'$\\omega_{{c_{i+1}}} = {omega_a[i]:.0f}$ рад/с' for i in range(j)]
+plt.legend(legend_labels, loc='center left', bbox_to_anchor=(1, 0.5))
+
+plt.grid(True)
+plt.title(r'$\bf{Абсолютная\ амплитуда\ крутильных\ колебаний}$', 
+          fontsize=14, fontname='Times New Roman')
+plt.xlabel(r'Номер приведенной массы', fontsize=14, fontname='Times New Roman')
+plt.ylabel(r'$а$', fontsize=14, fontname='Times New Roman')
+plt.xticks(mass_numbers)
+plt.autoscale(enable=True, axis='both', tight=None)
+plt.tight_layout()
+plt.show()
+
+# Дополнительная информация
+print("\n" + "="*60)
+print("СВОДНАЯ ИНФОРМАЦИЯ:")
+print("="*60)
+print(f"Количество приведенных масс: 14")
+print(f"Количество найденных собственных частот: {j}")
+print(f"Диапазон поиска частот: 0 - {len(omega_c)-1} рад/с")
+print("\nЗначения собственных частот (рад/с):")
+for i in range(j):
+    print(f"  ω{i+1} = {omega_a[i]:.2f} рад/с")
+
+# ============================================================================
+# ТАБЛИЦА ЗАВИСИМОСТИ СОБСТВЕННЫХ ЧАСТОТ ОТ АМПЛИТУД
+# ============================================================================
+print("\n" + "="*80)
+print("ТАБЛИЦА ЗАВИСИМОСТИ СОБСТВЕННЫХ ЧАСТОТ ОТ АМПЛИТУД")
+print("="*80)
+
+# Создаем таблицу с помощью pandas для красивого форматирования
+table_data = []
+
+# Заголовки столбцов
+columns = ['Номер массы'] + [f'ω{i+1} = {omega_a[i]:.1f} рад/с' for i in range(j)]
+
+# Заполняем данные
+for mass_idx in range(14):
+    row = [f'I_{mass_idx+1}']
+    for freq_idx in range(j):
+        row.append(f'{a_all[mass_idx, freq_idx]:.6f}')
+    table_data.append(row)
+
+# Создаем DataFrame
+df = pd.DataFrame(table_data, columns=columns)
+
+# Настройка отображения pandas
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
+
+print("\nАмплитуды колебаний для каждой массы при различных собственных частотах:")
+print(df.to_string(index=False))
+
+# Также выводим таблицу в формате, похожем на MATLAB
+print("\n" + "-"*80)
+print("ТАБЛИЦА В ФОРМАТЕ, АНАЛОГИЧНОМ MATLAB:")
+print("-"*80)
+
+# Выводим заголовки
+header = "Масса | " + " | ".join([f"ω{i+1:>10}" for i in range(j)])
+print(header)
+print("-" * (len(header) + 20))
+
+# Выводим данные
+for mass_idx in range(14):
+    row_values = [f'{a_all[mass_idx, freq_idx]:>10.6f}' for freq_idx in range(j)]
+    row_str = f"I_{mass_idx+1:2} | " + " | ".join(row_values)
+    print(row_str)
+
+print("\n" + "="*80)
+print("ПРИМЕЧАНИЕ: Все амплитуды нормированы на a_1 = 1")
+print("="*80)
+
+# Дополнительная статистика по амплитудам
+print("\nСтатистика по амплитудам:")
+print("-"*40)
+for freq_idx in range(j):
+    freq = omega_a[freq_idx]
+    amplitudes = a_all[:, freq_idx]
+    max_amp = np.max(np.abs(amplitudes))
+    min_amp = np.min(np.abs(amplitudes))
+    mean_amp = np.mean(np.abs(amplitudes))
+    
+    print(f"Для ω{freq_idx+1} = {freq:.1f} рад/с:")
+    print(f"  Максимальная амплитуда: {max_amp:.6f}")
+    print(f"  Минимальная амплитуда: {min_amp:.6f}")
+    print(f"  Средняя амплитуда: {mean_amp:.6f}")
+    print(f"  Отношение max/min: {max_amp/min_amp:.2f}")
+    print()
+
+# ============================================================================
+# ДОБАВЛЕННЫЙ КОД: 11 ОТДЕЛЬНЫХ ГРАФИКОВ ДЛЯ КАЖДОЙ ФОРМЫ КОЛЕБАНИЙ
+# ============================================================================
+
+if j > 0:
+    print("\n" + "="*60)
+    print("СОЗДАНИЕ ОТДЕЛЬНЫХ ГРАФИКОВ ДЛЯ КАЖДОЙ ФОРМЫ КОЛЕБАНИЙ")
+    print("="*60)
+    
+    # Исключаем частоту 164 рад/с
+    freq_to_exclude = 164
+    # Создаем маску для исключения частоты 164
+    exclude_mask = np.ones(j, dtype=bool)
+    for i in range(j):
+        if abs(omega_a[i] - freq_to_exclude) < 2:  # допуск ±2 рад/с
+            print(f"Исключаем частоту: {omega_a[i]} рад/с (близко к {freq_to_exclude})")
+            exclude_mask[i] = False
+    
+    # Фильтруем частоты и амплитуды
+    filtered_omega_a = omega_a[exclude_mask]
+    filtered_a_all = a_all[:, exclude_mask]
+    filtered_count = len(filtered_omega_a)
+    
+    print(f"После исключения частоты {freq_to_exclude} рад/с осталось {filtered_count} частот")
+    
+    if filtered_count > 0:
+        # Определяем количество графиков (минимум 11 или количество оставшихся частот)
+        num_plots = min(11, filtered_count)
+        
+        # Создаем фигуру с несколькими подграфиками
+        # Для 11 графиков используем сетку 4x3
+        rows, cols = 4, 3
+        
+        fig, axes = plt.subplots(rows, cols, figsize=(15, 15))
+        fig.suptitle('', 
+                     fontsize=16, fontweight='bold', y=0.98)
+        
+        # Преобразуем axes в плоский массив для удобства
+        axes = axes.ravel()
+        
+        # Создаем графики для каждой формы колебаний
+        for i in range(num_plots):
+            # Получаем соответствующую форму колебаний (используем отфильтрованные данные)
+            mode_shape = filtered_a_all[:, i]
+            freq_value = filtered_omega_a[i]
+            
+            # Строим график на соответствующем subplot
+            ax = axes[i]
+            
+            # Основной график - простой и чистый
+            ax.plot(mass_numbers, mode_shape, 'b-', linewidth=2, marker='o', markersize=4)
+            
+            # Горизонтальная линия нуля
+            ax.axhline(y=0, color='black', linestyle='-', linewidth=0.8, alpha=0.5)
+            
+            # Вертикальные линии для обозначения масс (тонкие и полупрозрачные)
+            for mass_num in mass_numbers:
+                ax.axvline(x=mass_num, color='gray', linestyle=':', linewidth=0.3, alpha=0.3)
+            
+            # Находим и отмечаем узлы (где амплитуда меняет знак)
+            node_count = 0
+            for k in range(len(mode_shape) - 1):
+                if mode_shape[k] * mode_shape[k+1] < 0:
+                    # Линейная интерполяция для нахождения приблизительного положения узла
+                    node_pos = mass_numbers[k] + abs(mode_shape[k]) / (abs(mode_shape[k]) + abs(mode_shape[k+1]))
+                    ax.axvline(x=node_pos, color='green', linestyle='--', 
+                              linewidth=1.5, alpha=0.7)
+                    node_count += 1
+            
+            # Настройки графика
+            ax.set_title(f'Форма крутильных колебаний для частоты\nω = {freq_value:.1f} рад/с', 
+                        fontsize=11, fontweight='bold', pad=10)
+            ax.set_xlabel('Номер приведенной массы', fontsize=10)
+            ax.set_ylabel('Амплитуда', fontsize=10)
+            ax.set_xlim(0.5, 14.5)
+            ax.set_xticks(mass_numbers)
+            ax.grid(True, alpha=0.2, linestyle='--')
+            
+            # ДОБАВЛЕНО: Применение индивидуальных ограничений по оси Y
+            if i < len(y_limits_grid):
+                y_min, y_max = y_limits_grid[i]
+                ax.set_ylim(y_min, y_max)
+                # Добавляем подпись с пределами
+                """ax.text(0.98, 0.02, f'Y: [{y_min:.1f}, {y_max:.1f}]', 
+                       transform=ax.transAxes, fontsize=8,
+                       verticalalignment='bottom', horizontalalignment='right',
+                       bbox=dict(boxstyle="round,pad=0.2", facecolor="lightgray", alpha=0.7))"""
+            
+            # Подписываем количество узлов
+            ax.text(0.02, 0.98, f'Узлов: {node_count}', 
+                   transform=ax.transAxes, fontsize=10,
+                   verticalalignment='top', fontweight='bold',
+                   bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7))
+        
+        # Скрываем лишние subplots
+        for i in range(num_plots, rows * cols):
+            axes[i].axis('off')
+        
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.95, hspace=0.4, wspace=0.3)
+        plt.show()
+        
+        # ============================================================================
+        # СОЗДАНИЕ ОТДЕЛЬНЫХ ГРАФИКОВ В ОТДЕЛЬНЫХ ОКНАХ
+        # ============================================================================
+        
+        print(f"\nСоздание {num_plots} отдельных графиков в отдельных окнах...")
+        
+        # Создаем отдельные графики в отдельных фигурах
+        for i in range(num_plots):
+            fig_individual = plt.figure(figsize=(10, 6))
+            
+            # Получаем форму колебаний (используем отфильтрованные данные)
+            mode_shape = filtered_a_all[:, i]
+            freq_value = filtered_omega_a[i]
+            
+            # Основной график - простой и чистый
+            plt.plot(mass_numbers, mode_shape, 'b-', linewidth=2.5, marker='o', 
+                    markersize=6, markerfacecolor='red', markeredgecolor='black', 
+                    markeredgewidth=1)
+            
+            # Линия нуля
+            plt.axhline(y=0, color='black', linestyle='-', linewidth=1.2, alpha=0.7)
+            
+            # Вертикальные линии для масс (тонкие)
+            for mass_num in mass_numbers:
+                plt.axvline(x=mass_num, color='gray', linestyle=':', 
+                           linewidth=0.5, alpha=0.3)
+            
+            # Находим и отмечаем узлы (где амплитуда меняет знак)
+            node_count = 0
+            for k in range(len(mode_shape) - 1):
+                if mode_shape[k] * mode_shape[k+1] < 0:
+                    # Линейная интерполяция для нахождения приблизительного положения узла
+                    node_pos = mass_numbers[k] + abs(mode_shape[k]) / (abs(mode_shape[k]) + abs(mode_shape[k+1]))
+                    plt.axvline(x=node_pos, color='green', linestyle='--', 
+                               linewidth=2, alpha=0.8)
+                    node_count += 1
+            
+            # Настройки графика
+            plt.title(f'Форма крутильных колебаний для частоты\nω = {freq_value:.1f} рад/с', 
+                     fontsize=14, fontweight='bold', pad=15)
+            plt.xlabel('Номер приведенной массы', fontsize=12)
+            plt.ylabel('Абсолютная амплитуда', fontsize=12)
+            plt.xlim(0.5, 14.5)
+            plt.xticks(mass_numbers)
+            plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.8)
+            
+            # ДОБАВЛЕНО: Применение индивидуальных ограничений по оси Y
+            if i < len(y_limits_individual):
+                y_min, y_max = y_limits_individual[i]
+                plt.ylim(y_min, y_max)
+                # Добавляем подпись с пределами
+                """plt.text(0.98, 0.02, f'Ограничения Y: [{y_min:.1f}, {y_max:.1f}]', 
+                       transform=plt.gca().transAxes, fontsize=10,
+                       verticalalignment='bottom', horizontalalignment='right',
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.7))"""
+            
+            # Подписываем количество узлов
+            plt.text(0.02, 0.98, f'Количество узлов: {node_count}', 
+                   transform=plt.gca().transAxes, fontsize=11,
+                   verticalalignment='top', fontweight='bold',
+                   bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7))
+            
+            plt.tight_layout()
+        
+        print(f"Создано {num_plots} отдельных графиков форм колебаний (без частоты {freq_to_exclude} рад/с).")
+        print("\n" + "="*60)
+        print("ИНФОРМАЦИЯ О НАСТРОЙКАХ ОГРАНИЧЕНИЙ:")
+        print("="*60)
+        print("Для изменения ограничений по оси Y измените массивы в начале кода:")
+        print("1. y_limits_grid - для графиков в сетке")
+        print("2. y_limits_individual - для отдельных графиков")
+        print("\nФормат: (минимальное_значение, максимальное_значение)")
+        print("Пример: (-1.2, 1.2) - ограничение от -1.2 до 1.2")
+        plt.show()
+    else:
+        print("После исключения частоты 164 рад/с не осталось частот для построения графиков.")
+else:
+    print("Собственные частоты не найдены, невозможно создать графики форм колебаний.")
