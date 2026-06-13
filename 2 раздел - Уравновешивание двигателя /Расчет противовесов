@@ -1,0 +1,98 @@
+# Расчет противовесов по Яманину
+
+# Противовесы Mc
+
+phiprc = (gamma/2-np.rad2deg(np.arctan(Mcxmax/Mcymax)))
+print('Угол отклонения противовеса от оси первого цилиндра =', str(round(phiprc, 1))+'°')
+Lprc = 0.234
+R1 = 0.039
+roprc = 0.04
+mprc = np.sqrt(Mcxmax**2+Mcymax**2)/(Lprc*roprc*omega**2)
+print('Масса противовеса =', round(mprc, 3), 'кг')
+for Rprc in range(40, 120):
+    Rprc = Rprc*0.001
+    for psiprc in range (45, 160):
+        psiprc = np.deg2rad(psiprc)
+        lch = (3*roprc)/(4*Rprc)
+        pch = (np.sin(psiprc)**3)/(2*psiprc-np.sin(2*psiprc))
+        if lch > pch-0.0004 and lch < pch+0.0004:
+            Sprc = 0.5*(Rprc**2)*(2*psiprc-np.sin(2*psiprc))
+            tprc = mprc/(ro*Sprc)
+            print('Rпр =', round(Rprc, 3), 'ψ =', round(np.rad2deg(psiprc), 3),
+                  'Sпр =', round(Sprc*1000000, 1), 'мм^2', 't =', round(tprc*1000,1), 'мм')
+print()
+
+
+# Уравновешивание момента от сил ПДМ 1-го порядка
+
+# Построение графика
+
+plt.figure(figsize=(10, 6))
+plt.plot(Mj1x_values, Mj1y_values, label='Уравновешивающий момент ', color='g', linewidth=6)
+plt.plot(Mj1x_values, Mj1y_values, label='Проекции Mj1 ', color='r', linewidth=1)
+plt.title('Уравновешивание момента сил инерции ПДМ 1-го порядка')
+plt.xlabel('Mj1x')
+plt.ylabel('Mj1y')
+plt.grid(True)
+plt.legend()
+plt.axhline(0, color='black', lw=1)
+plt.axvline(0, color='black', lw=1)
+plt.axis('equal')  # Соотношение осей
+plt.show()
+
+# Противовесы Mj1 внутренние
+
+phiprj11 = (gamma/2-np.rad2deg(np.arctan(Mj1xmax/Mj1ymax)))
+print('Угол отклонения противовеса от оси первого цилиндра =', str(round(phiprj11, 1))+'°')
+Lprj11 = 0.054
+R1 = 0.039
+roprj11 = 0.04
+mprj11 = ((np.sqrt(Mj1xmax**2+Mj1ymax**2))*0.3)/(Lprj11*roprj11*omega**2)
+print('Масса противовеса =', round(mprj11, 3), 'кг')
+for Rprj11 in range(40, 120):
+    Rprj11 = Rprj11*0.001
+    for psiprj11 in range (45, 160):
+        psiprj11 = np.deg2rad(psiprj11)
+        lchj11 = (3*roprj11)/(4*Rprj11)
+        pchj11 = (np.sin(psiprj11)**3)/(2*psiprj11-np.sin(2*psiprj11))
+        if lchj11 > pchj11-0.003 and lchj11 < pchj11+0.003:
+            Sprj11 = 0.5*(Rprj11**2)*(2*psiprj11-np.sin(2*psiprj11))
+            tprj11 = mprj11/(ro*Sprj11)
+            if 9<(tprj11*1000)<11:
+                print('Rпр =', round(Rprj11, 3), 'ψ =', round(np.rad2deg(psiprj11), 3),
+                      'Sпр =', round(Sprj11*1000000, 1), 'мм^2', 't =', round(tprj11*1000,1), 'мм')
+print()       
+
+# Противовесы Mj1 внешние
+
+phiprj12 = (gamma/2-np.rad2deg(np.arctan(Mj1xmax/Mj1ymax)))
+print('Угол отклонения противовеса от оси первого цилиндра =', str(round(phiprj12, 1))+'°')
+Lprj12 = 0.126
+R1 = 0.039
+roprj12 = 0.04
+mprj12 = ((np.sqrt(Mj1xmax**2+Mj1ymax**2))*0.7)/(Lprj12*roprj12*omega**2)
+print('Масса противовеса =', round(mprj12, 3), 'кг')
+for Rprj12 in range(40, 120):
+    Rprj12 = Rprj12*0.001
+    for psiprj12 in range (45, 160):
+        psiprj12 = np.deg2rad(psiprj12)
+        lchj12 = (3*roprj12)/(4*Rprj12)
+        pchj12 = (np.sin(psiprj12)**3)/(2*psiprj12-np.sin(2*psiprj12))
+        if lchj12 > pchj12-0.003 and lchj12 < pchj12+0.003:
+            Sprj12 = 0.5*(Rprj12**2)*(2*psiprj12-np.sin(2*psiprj12))
+            tprj12 = mprj12/(ro*Sprj12)
+            if 9<(tprj12*1000)<11:
+                print('Rпр =', round(Rprj12, 3), 'ψ =', round(np.rad2deg(psiprj12), 3),
+                      'Sпр =', round(Sprj12*1000000, 1), 'мм^2', 't =', round(tprj12*1000,1), 'мм')
+print()  
+
+# Балансирововчные валы
+
+rb = 0.01
+for alpha in range (0, 720):
+    alpha = np.deg2rad(alpha)
+    lchb=mpd*R*(omega**2)*lambd*np.cos(2*alpha)
+    for mb in range (100, 700):
+        mb = mb * 0.001
+        pchb=2*mb*rb*((2*omega)**2)*np.cos(2*alpha)
+        #print('M =',mb, lchb, '-----', pchb)
