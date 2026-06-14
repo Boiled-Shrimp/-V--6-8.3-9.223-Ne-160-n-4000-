@@ -1,3 +1,4 @@
+# main_optimizer_complete.py - Полная версия с выбором любых трех параметров
 import os
 import re
 import json
@@ -6,288 +7,410 @@ from tkinter import ttk, messagebox, scrolledtext, Toplevel
 from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use(class="string">'TkAgg')
+matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 
-BASE_DIR = rclass="string">"C:\Users\maxim\OneDrive\Документы\Диплом\НИРС"
+BASE_DIR = r"C:\Users\maxim\OneDrive\Документы\Диплом\НИРС"
 
-class=class="string">"comment"># ========== ПАРАМЕТРЫ ДЛЯ ОСНОВНОЙ ПРОГРАММЫ ==========
-X_VALUES = [class="number">0.10, class="number">0.12, class="number">0.14, class="number">0.16, class="number">0.18]
-Y_VALUES = [class="number">2, class="number">7, class="number">12, class="number">17, class="number">22]
-Z_VALUES = [class="number">5, class="number">6, class="number">7, class="number">8, class="number">9]
+# ========== ПАРАМЕТРЫ ПО УМОЛЧАНИЮ ==========
+DEFAULT_X_VALUES = [0.10, 0.12, 0.14, 0.16, 0.18]
+DEFAULT_Y_VALUES = [2, 7, 12, 17, 22]
+DEFAULT_Z_VALUES = [5, 6, 7, 8, 9]
 
-class=class="string">"comment"># Параметры для чтения
+# Список доступных параметров для выбора
+AVAILABLE_PARAMS = {
+    'X003': 'Диаметр сопловых отверстий [мм]',
+    'C031': 'Угол опережения впрыска [°]',
+    'X002': 'Количество сопловых отверстий',
+    'C081': 'Степень повышения давления компрессора',
+    'X001': 'Степень сжатия',
+    'C011': 'Цикловая подача топлива [г]',
+    'W039': 'Вихревое число',
+    'C021': 'Коэффициент избытка воздуха',
+}
+
+# Параметры для чтения из файлов результатов
 PARAM_MAP = {
-    class="string">'Ne': class="string">'Эффективная мощность [кВт]',
-    class="string">'be': class="string">'Удельный расход [г/кВт·ч]',
-    class="string">'P_.max': class="string">'Макс. давление впрыска [бар]',
-    class="string">'Pz': class="string">'Макс. давление цикла [бар]',
-    class="string">'NOx.,ppm': class="string">'Выбросы NOx [ppm]',
-    class="string">'PM': class="string">'Эмиссия PM [г/кВт·ч]'
+    'Ne': 'Эффективная мощность [кВт]',
+    'be': 'Удельный расход [г/кВт·ч]',
+    'P_.max': 'Макс. давление впрыска [бар]',
+    'Pz': 'Макс. давление цикла [бар]',
+    'NOx.,ppm': 'Выбросы NOx [ppm]',
+    'PM': 'Эмиссия PM [г/кВт·ч]'
 }
 
 DISPLAY_NAMES = {
-    class="string">'Ne': class="string">'Мощность [кВт]',
-    class="string">'be': class="string">'Расход топлива [г/кВт·ч]',
-    class="string">'P_.max': class="string">'Давление впрыска [бар]',
-    class="string">'Pz': class="string">'Давление цикла [бар]',
-    class="string">'NOx.,ppm': class="string">'Выбросы NOx [ppm]',
-    class="string">'PM': class="string">'Твердые частицы [г/кВт·ч]'
+    'Ne': 'Мощность [кВт]',
+    'be': 'Расход топлива [г/кВт·ч]',
+    'P_.max': 'Давление впрыска [бар]',
+    'Pz': 'Давление цикла [бар]',
+    'NOx.,ppm': 'Выбросы NOx [ppm]',
+    'PM': 'Твердые частицы [г/кВт·ч]'
 }
 
 COLORS = {
-    class="string">'Ne': class="string">'blue',
-    class="string">'be': class="string">'red',
-    class="string">'P_.max': class="string">'green',
-    class="string">'Pz': class="string">'orange',
-    class="string">'NOx.,ppm': class="string">'purple',
-    class="string">'PM': class="string">'brown'
+    'Ne': 'blue',
+    'be': 'red',
+    'P_.max': 'green',
+    'Pz': 'orange',
+    'NOx.,ppm': 'purple',
+    'PM': 'brown'
 }
 
-class=class="string">"comment"># Параметры для 3D оптимизации
+# Параметры для 3D оптимизации
 PARAM_CRITERIA = {
-    class="string">'Ne': {class="string">'name': class="string">'Мощность [кВт]', class="string">'min': class="number">130, class="string">'max': class="number">150, class="string">'unit': class="string">'кВт', class="string">'type': class="string">'max'},
-    class="string">'be': {class="string">'name': class="string">'Расход топлива [г/кВт·ч]', class="string">'min': class="number">230, class="string">'max': class="number">260, class="string">'unit': class="string">'г/кВт·ч', class="string">'type': class="string">'min'},
-    class="string">'P_.max': {class="string">'name': class="string">'Давление впрыска [бар]', class="string">'min': class="number">800, class="string">'max': class="number">2500, class="string">'unit': class="string">'бар', class="string">'type': class="string">'min'},
-    class="string">'Pz': {class="string">'name': class="string">'Давление цикла [бар]', class="string">'min': class="number">120, class="string">'max': class="number">180, class="string">'unit': class="string">'бар', class="string">'type': class="string">'max'},
-    class="string">'NOx.,ppm': {class="string">'name': class="string">'Выбросы NOx [ppm]', class="string">'min': class="number">200, class="string">'max': class="number">600, class="string">'unit': class="string">'ppm', class="string">'type': class="string">'min'},
-    class="string">'PM': {class="string">'name': class="string">'Твердые частицы [г/кВт·ч]', class="string">'min': class="number">0.05, class="string">'max': class="number">0.3, class="string">'unit': class="string">'г/кВт·ч', class="string">'type': class="string">'min'}
+    'Ne': {'name': 'Мощность [кВт]', 'min': 130, 'max': 150, 'unit': 'кВт', 'type': 'max'},
+    'be': {'name': 'Расход топлива [г/кВт·ч]', 'min': 230, 'max': 260, 'unit': 'г/кВт·ч', 'type': 'min'},
+    'P_.max': {'name': 'Давление впрыска [бар]', 'min': 800, 'max': 2500, 'unit': 'бар', 'type': 'min'},
+    'Pz': {'name': 'Давление цикла [бар]', 'min': 120, 'max': 180, 'unit': 'бар', 'type': 'max'},
+    'NOx.,ppm': {'name': 'Выбросы NOx [ppm]', 'min': 200, 'max': 600, 'unit': 'ppm', 'type': 'min'},
+    'PM': {'name': 'Твердые частицы [г/кВт·ч]', 'min': 0.05, 'max': 0.3, 'unit': 'г/кВт·ч', 'type': 'min'}
 }
 
-class=class="string">"comment"># ========== ОБЩИЕ ФУНКЦИИ ==========
+# ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+current_X_VALUES = DEFAULT_X_VALUES.copy()
+current_Y_VALUES = DEFAULT_Y_VALUES.copy()
+current_Z_VALUES = DEFAULT_Z_VALUES.copy()
+current_X_CODE = 'X003'
+current_Y_CODE = 'C031'
+current_Z_CODE = 'X002'
+
+# ========== ОБЩИЕ ФУНКЦИИ ==========
 def parse_number(s):
     try:
-        return float(s.replace(class="string">'E', class="string">'e'))
+        return float(s.replace('E', 'e'))
     except:
         try:
             return float(s)
         except:
             return None
 
-def get_z_from_swp(folder_path):
-    swp_path = os.path.join(folder_path, class="string">"diesel.swp")
+def get_param_from_swp(folder_path, param_code):
+    swp_path = os.path.join(folder_path, "diesel.swp")
     if not os.path.exists(swp_path):
         return None
     try:
-        with open(swp_path, class="string">'r', encoding=class="string">'utf-class="number">8', errors=class="string">'ignore') as f:
+        with open(swp_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
-            match = re.search(rclass="string">'X002\s+(\d+\.?\d*)', content)
+            match = re.search(rf'{param_code}\s+([\d\.]+)', content)
             if match:
-                z = int(float(match.group(class="number">1)))
-                if class="number">5 <= z <= class="number">9:
-                    return z
+                return float(match.group(1))
     except:
         pass
     return None
 
-def parse_fol_file(file_path):
-    with open(file_path, class="string">'r', encoding=class="string">'utf-class="number">8', errors=class="string">'ignore') as f:
+def parse_fol_file(file_path, x_code, y_code):
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         lines = f.readlines()
 
     points = []
-    i = class="number">0
+    i = 0
 
     while i < len(lines):
         line = lines[i]
 
-        if class="string">'d_' in line and class="string">'Teta_' in line and class="string">'=' in line:
-            d_match = re.search(rclass="string">'d_\s*=\s*([\d\.]+)', line)
-            teta_match = re.search(rclass="string">'Teta_\s*=\s*([\d\.]+)', line)
+        if x_code in line and y_code in line and '=' in line:
+            x_match = re.search(rf'{x_code}\s*=\s*([\d\.]+)', line)
+            y_match = re.search(rf'{y_code}\s*=\s*([\d\.]+)', line)
 
-            if d_match and teta_match:
+            if x_match and y_match:
                 current = {
-                    class="string">'x': float(d_match.group(class="number">1)),
-                    class="string">'y': float(teta_match.group(class="number">1))
+                    'x': float(x_match.group(1)),
+                    'y': float(y_match.group(1))
                 }
 
-                j = i + class="number">1
+                j = i + 1
                 while j < len(lines):
                     curr = lines[j]
 
-                    if class="string">'d_' in curr and class="string">'Teta_' in curr and class="string">'=' in curr:
+                    if x_code in curr and y_code in curr and '=' in curr:
                         break
 
-                    if class="string">'|' in curr and any(c.isalpha() for c in curr):
-                        if j + class="number">1 < len(lines) and class="string">'|' in lines[j+class="number">1]:
-                            params = [p.strip() for p in curr.split(class="string">'|')[class="number">1:-class="number">1]]
-                            values = [v.strip() for v in lines[j+class="number">1].split(class="string">'|')[class="number">1:-class="number">1]]
+                    if '|' in curr and any(c.isalpha() for c in curr):
+                        if j + 1 < len(lines) and '|' in lines[j+1]:
+                            params = [p.strip() for p in curr.split('|')[1:-1]]
+                            values = [v.strip() for v in lines[j+1].split('|')[1:-1]]
 
                             for param, val in zip(params, values):
                                 if param in PARAM_MAP:
                                     num = parse_number(val)
                                     if num is not None:
                                         current[param] = num
-                            j += class="number">2
+                            j += 2
                             continue
-                    j += class="number">1
+                    j += 1
 
-                if len(current) >/ class="number">2:
+                if len(current) > 2:
                     points.append(current)
                 i = j
             else:
-                i += class="number">1
+                i += 1
         else:
-            i += class="number">1
+            i += 1
 
     return points
 
-def load_all_data():
+def load_all_data(x_code, y_code, z_code, x_values, y_values, z_values):
     data = {}
 
     tmp_folders = []
     for item in os.listdir(BASE_DIR):
         item_path = os.path.join(BASE_DIR, item)
-        if os.path.isdir(item_path) and item.startswith(class="string">'tmp'):
+        if os.path.isdir(item_path) and item.startswith('tmp'):
             tmp_folders.append(item)
 
     for folder in tmp_folders:
         folder_path = os.path.join(BASE_DIR, folder)
 
-        fol_files = [f for f in os.listdir(folder_path) if f.endswith(class="string">'.fol')]
+        fol_files = [f for f in os.listdir(folder_path) if f.endswith('.fol')]
         if not fol_files:
             continue
 
-        fol_path = os.path.join(folder_path, fol_files[class="number">0])
-        z = get_z_from_swp(folder_path)
+        fol_path = os.path.join(folder_path, fol_files[0])
+        z = get_param_from_swp(folder_path, z_code)
 
-        if z and z in Z_VALUES:
-            points = parse_fol_file(fol_path)
+        if z is not None and z in z_values:
+            points = parse_fol_file(fol_path, x_code, y_code)
             if points:
                 data[z] = points
-                print(fclass="string">"Загружено {len(points)} точек для {z} отверстий")
+                print(f"Загружено {len(points)} точек для {z_code}={z}")
 
     return data
 
-def get_matrix(data, z, param):
+def get_matrix(data, z, param, x_values, y_values):
     if z not in data:
         return None, None, None
 
-    matrix = np.full((len(X_VALUES), len(Y_VALUES)), np.nan)
+    matrix = np.full((len(x_values), len(y_values)), np.nan)
 
     for point in data[z]:
-        x = point.get(class="string">'x')
-        y = point.get(class="string">'y')
+        x = point.get('x')
+        y = point.get('y')
         val = point.get(param)
 
         if x is not None and y is not None and val is not None:
             try:
-                x_idx = X_VALUES.index(round(x, class="number">3))
-                y_idx = Y_VALUES.index(round(y, class="number">0))
+                x_idx = x_values.index(round(x, 5))
+                y_idx = y_values.index(round(y, 3))
                 matrix[x_idx, y_idx] = val
-            except:
+            except ValueError:
                 pass
 
-    return X_VALUES, Y_VALUES, matrix
+    return x_values, y_values, matrix
 
-class=class="string">"comment"># ========== ОСНОВНАЯ ПРОГРАММА ==========
+# ========== ОСНОВНАЯ ПРОГРАММА ==========
 class MainOptimizerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title(class="string">"Оптимизатор Дизель-РК")
-        self.root.geometry(class="string">"1200x800")
+        self.root.title("Оптимизатор Дизель-РК")
+        self.root.geometry("1300x900")
 
         self.data = {}
         self.available_params = []
+        self.current_x_code = current_X_CODE
+        self.current_y_code = current_Y_CODE
+        self.current_z_code = current_Z_CODE
+        self.current_x_values = current_X_VALUES.copy()
+        self.current_y_values = current_Y_VALUES.copy()
+        self.current_z_values = current_Z_VALUES.copy()
+
         self.create_widgets()
 
     def create_widgets(self):
-        main = ttk.Frame(self.root, padding=class="string">"class="number">10")
-        main.pack(fill=class="string">'both', expand=True)
+        main = ttk.Frame(self.root, padding="10")
+        main.pack(fill='both', expand=True)
 
-        class=class="string">"comment"># Верхняя панель
         top_frame = ttk.Frame(main)
-        top_frame.pack(fill=class="string">'x', pady=class="number">5)
+        top_frame.pack(fill='x', pady=5)
 
-        ttk.Button(top_frame, text=class="string">"📂 Загрузить данные", command=self.load_data).pack(side=class="string">'left', padx=class="number">5)
-        ttk.Button(top_frame, text=class="string">"📊 Все параметры", command=self.plot_individual).pack(side=class="string">'left', padx=class="number">5)
-        ttk.Button(top_frame, text=class="string">"🔮 Наложение изолиний", command=self.plot_overlay).pack(side=class="string">'left', padx=class="number">5)
-        ttk.Button(top_frame, text=class="string">"💾 Сохранить JSON", command=self.save_json).pack(side=class="string">'left', padx=class="number">5)
-        ttk.Button(top_frame, text=class="string">"🎯 3D Оптимизация", command=self.open_3d_optimizer).pack(side=class="string">'left', padx=class="number">5)
+        ttk.Button(top_frame, text="⚙ Настройка параметров", command=self.open_settings_window).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="📂 Загрузить данные", command=self.load_data).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="📊 Все параметры", command=self.plot_individual).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="🔮 Наложение изолиний", command=self.plot_overlay).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="💾 Сохранить JSON", command=self.save_json).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="🎯 3D Оптимизация", command=self.open_3d_optimizer).pack(side='left', padx=5)
 
-        class=class="string">"comment"># Панель выбора параметра
-        select_frame = ttk.LabelFrame(main, text=class="string">"Выберите параметр для отдельного графика")
-        select_frame.pack(fill=class="string">'x', pady=class="number">5)
+        select_frame = ttk.LabelFrame(main, text="Выберите параметр для отдельного графика")
+        select_frame.pack(fill='x', pady=5)
 
         self.param_var = tk.StringVar()
-        self.param_combo = ttk.Combobox(select_frame, textvariable=self.param_var, state=class="string">'readonly', width=class="number">40)
-        self.param_combo.pack(pady=class="number">5)
-        self.param_combo.bind(class="string">'<<ComboboxSelected>/>/', self.plot_single_param)
+        self.param_combo = ttk.Combobox(select_frame, textvariable=self.param_var, state='readonly', width=40)
+        self.param_combo.pack(pady=5)
+        self.param_combo.bind('<<ComboboxSelected>>', self.plot_single_param)
 
-        class=class="string">"comment"># Панель выбора параметров для наложения
-        overlay_frame = ttk.LabelFrame(main, text=class="string">"Выберите параметры для наложения (можно несколько)")
-        overlay_frame.pack(fill=class="string">'x', pady=class="number">5)
+        overlay_frame = ttk.LabelFrame(main, text="Выберите параметры для наложения (можно несколько)")
+        overlay_frame.pack(fill='x', pady=5)
 
         self.check_vars = {}
-        param_list = [class="string">'Ne', class="string">'be', class="string">'P_.max', class="string">'Pz', class="string">'NOx.,ppm', class="string">'PM']
+        param_list = ['Ne', 'be', 'P_.max', 'Pz', 'NOx.,ppm', 'PM']
 
         for i, param in enumerate(param_list):
             var = tk.BooleanVar(value=False)
             self.check_vars[param] = var
             name = DISPLAY_NAMES.get(param, param)
             cb = ttk.Checkbutton(overlay_frame, text=name, variable=var)
-            cb.grid(row=i//class="number">3, column=i%class="number">3, sticky=class="string">'w', padx=class="number">20, pady=class="number">2)
+            cb.grid(row=i//3, column=i%3, sticky='w', padx=20, pady=2)
 
-        ttk.Button(overlay_frame, text=class="string">"🔄 Обновить наложение", command=self.plot_overlay).grid(row=class="number">2, column=class="number">0, pady=class="number">5)
+        ttk.Button(overlay_frame, text="🔄 Обновить наложение", command=self.plot_overlay).grid(row=2, column=0, pady=5)
 
-        class=class="string">"comment"># Информация
-        info_frame = ttk.LabelFrame(main, text=class="string">"Информация о сканировании")
-        info_frame.pack(fill=class="string">'x', pady=class="number">5)
+        info_frame = ttk.LabelFrame(main, text="Информация о сканировании")
+        info_frame.pack(fill='x', pady=5)
 
-        self.info = scrolledtext.ScrolledText(info_frame, height=class="number">5)
-        self.info.pack(fill=class="string">'both', expand=True, padx=class="number">5, pady=class="number">5)
+        self.info = scrolledtext.ScrolledText(info_frame, height=6)
+        self.info.pack(fill='both', expand=True, padx=5, pady=5)
 
-        class=class="string">"comment"># Лог
-        log_frame = ttk.LabelFrame(main, text=class="string">"Лог")
-        log_frame.pack(fill=class="string">'both', expand=True, pady=class="number">5)
+        log_frame = ttk.LabelFrame(main, text="Лог")
+        log_frame.pack(fill='both', expand=True, pady=5)
 
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=class="number">10)
-        self.log_text.pack(fill=class="string">'both', expand=True, padx=class="number">5, pady=class="number">5)
+        self.log_text = scrolledtext.ScrolledText(log_frame, height=10)
+        self.log_text.pack(fill='both', expand=True, padx=5, pady=5)
+
+        self.update_info()
 
     def log(self, msg, error=False):
-        timestamp = datetime.now().strftime(class="string">"%H:%M:%S")
-        prefix = class="string">"❌" if error else class="string">"✓"
-        self.log_text.insert(class="string">'end', fclass="string">"[{timestamp}] {prefix} {msg}\n")
-        self.log_text.see(class="string">'end')
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        prefix = "❌" if error else "✓"
+        self.log_text.insert('end', f"[{timestamp}] {prefix} {msg}\n")
+        self.log_text.see('end')
         self.root.update()
 
-    def load_data(self):
-        self.log(class="string">"Загрузка данных...")
-        self.data = load_all_data()
+    def update_info(self):
+        self.info.delete(1.0, 'end')
+        self.info.insert('end', "ТЕКУЩИЕ НАСТРОЙКИ ПАРАМЕТРОВ:\n")
+        self.info.insert('end', f"  Параметр X ({self.current_x_code}): {AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code)} = {self.current_x_values}\n")
+        self.info.insert('end', f"  Параметр Y ({self.current_y_code}): {AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code)} = {self.current_y_values}\n")
+        self.info.insert('end', f"  Параметр Z ({self.current_z_code}): {AVAILABLE_PARAMS.get(self.current_z_code, self.current_z_code)} = {self.current_z_values}\n\n")
 
         if self.data:
-            sample = list(self.data.values())[class="number">0][class="number">0]
+            self.info.insert('end', "ЗАГРУЖЕННЫЕ ДАННЫЕ:\n")
+            for z in self.current_z_values:
+                if z in self.data:
+                    self.info.insert('end', f"  {self.current_z_code}={z}: {len(self.data[z])} точек\n")
+                else:
+                    self.info.insert('end', f"  {self.current_z_code}={z}: нет данных\n")
+
+    def open_settings_window(self):
+        settings_win = Toplevel(self.root)
+        settings_win.title("Настройка параметров эксперимента")
+        settings_win.geometry("750x550")
+        settings_win.transient(self.root)
+        settings_win.grab_set()
+
+        ttk.Label(settings_win, text="Выбор параметров для трехфакторного эксперимента",
+                  font=('Arial', 12)).pack(pady=10)
+
+        frame = ttk.Frame(settings_win, padding="10")
+        frame.pack(fill='both', expand=True)
+
+        param_list = [
+            ('X003', 'Диаметр сопловых отверстий [мм] (X003)'),
+            ('C031', 'Угол опережения впрыска [°] (C031)'),
+            ('X002', 'Количество сопловых отверстий (X002)'),
+            ('C081', 'Степень повышения давления компрессора (C081)'),
+            ('X001', 'Степень сжатия (X001)'),
+            ('C011', 'Цикловая подача топлива [г] (C011)'),
+            ('W039', 'Вихревое число (W039)'),
+            ('C021', 'Коэффициент избытка воздуха (C021)'),
+        ]
+
+        ttk.Label(frame, text="Параметр X (горизонтальная ось):").grid(row=0, column=0, sticky='w', pady=8)
+        x_var = tk.StringVar(value=f"{AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code)} ({self.current_x_code})")
+        x_combo = ttk.Combobox(frame, textvariable=x_var,
+                               values=[name for code, name in param_list],
+                               state='readonly', width=45)
+        x_combo.grid(row=0, column=1, pady=8)
+
+        ttk.Label(frame, text="Значения (через пробел):").grid(row=1, column=0, sticky='w', pady=8)
+        x_vals_entry = ttk.Entry(frame, width=45)
+        x_vals_entry.insert(0, ' '.join(str(v) for v in self.current_x_values))
+        x_vals_entry.grid(row=1, column=1, pady=8)
+
+        ttk.Label(frame, text="Параметр Y (вертикальная ось):").grid(row=2, column=0, sticky='w', pady=8)
+        y_var = tk.StringVar(value=f"{AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code)} ({self.current_y_code})")
+        y_combo = ttk.Combobox(frame, textvariable=y_var,
+                               values=[name for code, name in param_list],
+                               state='readonly', width=45)
+        y_combo.grid(row=2, column=1, pady=8)
+
+        ttk.Label(frame, text="Значения (через пробел):").grid(row=3, column=0, sticky='w', pady=8)
+        y_vals_entry = ttk.Entry(frame, width=45)
+        y_vals_entry.insert(0, ' '.join(str(v) for v in self.current_y_values))
+        y_vals_entry.grid(row=3, column=1, pady=8)
+
+        ttk.Label(frame, text="Параметр Z (разные файлы):").grid(row=4, column=0, sticky='w', pady=8)
+        z_var = tk.StringVar(value=f"{AVAILABLE_PARAMS.get(self.current_z_code, self.current_z_code)} ({self.current_z_code})")
+        z_combo = ttk.Combobox(frame, textvariable=z_var,
+                               values=[name for code, name in param_list],
+                               state='readonly', width=45)
+        z_combo.grid(row=4, column=1, pady=8)
+
+        ttk.Label(frame, text="Значения (через пробел):").grid(row=5, column=0, sticky='w', pady=8)
+        z_vals_entry = ttk.Entry(frame, width=45)
+        z_vals_entry.insert(0, ' '.join(str(v) for v in self.current_z_values))
+        z_vals_entry.grid(row=5, column=1, pady=8)
+
+        ttk.Label(frame, text="Важно: Значения параметра Z должны соответствовать фактическим данным\nво временных папках (определяются по diesel.swp)",
+                  foreground='orange').grid(row=6, column=0, columnspan=2, pady=15)
+
+        def get_code_from_display(display_name):
+            for code, name in param_list:
+                if name == display_name:
+                    return code
+            return None
+
+        def apply_settings():
+            try:
+                x_display = x_combo.get()
+                y_display = y_combo.get()
+                z_display = z_combo.get()
+
+                self.current_x_code = get_code_from_display(x_display)
+                self.current_y_code = get_code_from_display(y_display)
+                self.current_z_code = get_code_from_display(z_display)
+
+                self.current_x_values = [float(v) for v in x_vals_entry.get().split()]
+                self.current_y_values = [float(v) for v in y_vals_entry.get().split()]
+                self.current_z_values = [float(v) for v in z_vals_entry.get().split()]
+
+                self.update_info()
+                settings_win.destroy()
+                self.log(f"Настройки обновлены: X={self.current_x_code}, Y={self.current_y_code}, Z={self.current_z_code}")
+            except Exception as e:
+                self.log(f"Ошибка при применении настроек: {e}", error=True)
+                messagebox.showerror("Ошибка", f"Неверный формат значений: {e}")
+
+        btn_frame = ttk.Frame(settings_win)
+        btn_frame.pack(pady=20)
+        ttk.Button(btn_frame, text="Применить", command=apply_settings).pack(side='left', padx=10)
+        ttk.Button(btn_frame, text="Отмена", command=settings_win.destroy).pack(side='left', padx=10)
+
+    def load_data(self):
+        self.log(f"Загрузка данных с параметрами: X={self.current_x_code}, Y={self.current_y_code}, Z={self.current_z_code}")
+        self.data = load_all_data(
+            self.current_x_code, self.current_y_code, self.current_z_code,
+            self.current_x_values, self.current_y_values, self.current_z_values
+        )
+
+        if self.data:
+            sample = list(self.data.values())[0][0]
             self.available_params = [p for p in PARAM_MAP.keys() if p in sample]
         else:
             self.available_params = []
 
         display_list = [DISPLAY_NAMES.get(p, p) for p in self.available_params]
-        self.param_combo[class="string">'values'] = display_list
+        self.param_combo['values'] = display_list
         if display_list:
-            self.param_combo.set(display_list[class="number">0])
+            self.param_combo.set(display_list[0])
 
-        self.info.delete(class="number">1.0, class="string">'end')
-        self.info.insert(class="string">'end', class="string">"ПАРАМЕТРЫ СКАНИРОВАНИЯ:\n")
-        self.info.insert(class="string">'end', fclass="string">"  Диаметр сопел: {X_VALUES} мм\n")
-        self.info.insert(class="string">'end', fclass="string">"  Угол впрыска: {Y_VALUES}°\n")
-        self.info.insert(class="string">'end', fclass="string">"  Отверстия: {Z_VALUES}\n\n")
-        self.info.insert(class="string">'end', class="string">"ЗАГРУЖЕННЫЕ ДАННЫЕ:\n")
-
-        total_points = class="number">0
-        for z in Z_VALUES:
-            if z in self.data:
-                points = len(self.data[z])
-                total_points += points
-                self.info.insert(class="string">'end', fclass="string">"  {z} отверстий: {points} точек\n")
-            else:
-                self.info.insert(class="string">'end', fclass="string">"  {z} отверстий: нет данных\n")
-
-        self.log(fclass="string">"Загружено {len(self.data)} сканирований, всего {total_points} точек")
-        self.log(fclass="string">"Доступные параметры: {self.available_params}")
+        self.update_info()
+        total_points = sum(len(p) for p in self.data.values())
+        self.log(f"Загружено {len(self.data)} сканирований, всего {total_points} точек")
+        self.log(f"Доступные параметры: {self.available_params}")
 
     def plot_single_param(self, event=None):
         if not self.data:
-            self.log(class="string">"Нет данных!", error=True)
+            self.log("Нет данных!", error=True)
             return
 
         selected = self.param_var.get()
@@ -298,324 +421,319 @@ class MainOptimizerApp:
                 break
 
         if not param or param not in self.available_params:
-            self.log(fclass="string">"Параметр {selected} не найден", error=True)
+            self.log(f"Параметр {selected} не найден", error=True)
             return
 
-        z_list = sorted([z for z in Z_VALUES if z in self.data])
+        z_list = sorted([z for z in self.current_z_values if z in self.data])
         if not z_list:
             return
 
-        self.log(fclass="string">"Построение графика для: {DISPLAY_NAMES.get(param, param)}")
+        self.log(f"Построение графика для: {DISPLAY_NAMES.get(param, param)}")
 
         n_z = len(z_list)
-        n_cols = min(class="number">3, n_z)
-        n_rows = (n_z + n_cols - class="number">1) // n_cols
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(class="number">5*n_cols, class="number">4.5*n_rows))
+        n_cols = min(3, n_z)
+        n_rows = (n_z + n_cols - 1) // n_cols
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4.5*n_rows))
 
-        if n_z == class="number">1:
+        if n_z == 1:
             axes = [axes]
         else:
             axes = axes.flatten()
 
         for idx, z in enumerate(z_list):
-            if idx >/= len(axes):
+            if idx >= len(axes):
                 break
             ax = axes[idx]
-            X, Y, matrix = get_matrix(self.data, z, param)
+            X, Y, matrix = get_matrix(self.data, z, param, self.current_x_values, self.current_y_values)
 
             if matrix is not None and not np.all(np.isnan(matrix)):
                 matrix_disp = np.nan_to_num(matrix)
-                cf = ax.contourf(Y, X, matrix_disp, levels=class="number">12, cmap=class="string">'viridis')
+                cf = ax.contourf(Y, X, matrix_disp, levels=12, cmap='viridis')
                 plt.colorbar(cf, ax=ax)
 
-                contour = ax.contour(Y, X, matrix_disp, levels=class="number">6, colors=class="string">'white', linewidths=class="number">0.8)
-                ax.clabel(contour, inline=True, fontsize=class="number">8, fmt=class="string">'%.3f')
+                contour = ax.contour(Y, X, matrix_disp, levels=6, colors='white', linewidths=0.8)
+                ax.clabel(contour, inline=True, fontsize=8, fmt='%.3f')
 
-                ax.set_xlabel(class="string">'Угол впрыска [°]')
-                ax.set_ylabel(class="string">'Диаметр сопел [мм]')
-                ax.set_title(fclass="string">'{DISPLAY_NAMES.get(param, param)}\n{z} отверстий')
+                ax.set_xlabel(AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code))
+                ax.set_ylabel(AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code))
+                ax.set_title(f'{DISPLAY_NAMES.get(param, param)}\n{self.current_z_code}={z}')
 
                 valid = matrix[~np.isnan(matrix)]
-                if len(valid) >/ class="number">0:
-                    if param in [class="string">'be', class="string">'NOx.,ppm', class="string">'PM']:
+                if len(valid) > 0:
+                    if param in ['be', 'NOx.,ppm', 'PM']:
                         opt = np.min(valid)
                     else:
                         opt = np.max(valid)
                     opt_idx = np.where(matrix == opt)
-                    if len(opt_idx[class="number">0]) >/ class="number">0:
-                        ax.plot(Y[opt_idx[class="number">1][class="number">0]], X[opt_idx[class="number">0][class="number">0]], class="string">'r*', markersize=class="number">15)
-                        if opt < class="number">1:
-                            ax.annotate(fclass="string">'{opt:.4f}', (Y[opt_idx[class="number">1][class="number">0]], X[opt_idx[class="number">0][class="number">0]]),
-                                       xytext=(class="number">5, class="number">5), textcoords=class="string">'offset points', fontsize=class="number">9)
+                    if len(opt_idx[0]) > 0:
+                        ax.plot(Y[opt_idx[1][0]], X[opt_idx[0][0]], 'r*', markersize=15)
+                        if opt < 1:
+                            ax.annotate(f'{opt:.4f}', (Y[opt_idx[1][0]], X[opt_idx[0][0]]),
+                                       xytext=(5, 5), textcoords='offset points', fontsize=9)
                         else:
-                            ax.annotate(fclass="string">'{opt:.1f}', (Y[opt_idx[class="number">1][class="number">0]], X[opt_idx[class="number">0][class="number">0]]),
-                                       xytext=(class="number">5, class="number">5), textcoords=class="string">'offset points', fontsize=class="number">9)
+                            ax.annotate(f'{opt:.1f}', (Y[opt_idx[1][0]], X[opt_idx[0][0]]),
+                                       xytext=(5, 5), textcoords='offset points', fontsize=9)
             else:
-                ax.text(class="number">0.5, class="number">0.5, class="string">'Нет данных', transform=ax.transAxes, ha=class="string">'center')
-                ax.set_xlabel(class="string">'Угол впрыска [°]')
-                ax.set_ylabel(class="string">'Диаметр сопел [мм]')
+                ax.text(0.5, 0.5, 'Нет данных', transform=ax.transAxes, ha='center')
+                ax.set_xlabel(AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code))
+                ax.set_ylabel(AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code))
 
         for idx in range(len(z_list), len(axes)):
             axes[idx].set_visible(False)
 
-        plt.suptitle(DISPLAY_NAMES.get(param, param), fontsize=class="number">14)
+        plt.suptitle(DISPLAY_NAMES.get(param, param), fontsize=14)
         plt.tight_layout()
         plt.show()
-        self.log(class="string">"График построен")
+        self.log("График построен")
 
     def plot_individual(self):
         if not self.data:
-            self.log(class="string">"Нет данных!", error=True)
+            self.log("Нет данных!", error=True)
             return
 
-        z_list = sorted([z for z in Z_VALUES if z in self.data])
+        z_list = sorted([z for z in self.current_z_values if z in self.data])
 
         for z in z_list:
-            fig, axes = plt.subplots(class="number">2, class="number">3, figsize=(class="number">15, class="number">10))
+            fig, axes = plt.subplots(2, 3, figsize=(15, 10))
             axes = axes.flatten()
 
-            param_idx = class="number">0
+            param_idx = 0
             for param, title in DISPLAY_NAMES.items():
                 if param not in self.available_params:
-                    param_idx += class="number">1
+                    param_idx += 1
                     continue
-                if param_idx >/= class="number">6:
+                if param_idx >= 6:
                     break
 
                 ax = axes[param_idx]
-                X, Y, matrix = get_matrix(self.data, z, param)
+                X, Y, matrix = get_matrix(self.data, z, param, self.current_x_values, self.current_y_values)
 
                 if matrix is not None and not np.all(np.isnan(matrix)):
                     matrix_disp = np.nan_to_num(matrix)
-                    cf = ax.contourf(Y, X, matrix_disp, levels=class="number">12, cmap=class="string">'viridis')
+                    cf = ax.contourf(Y, X, matrix_disp, levels=12, cmap='viridis')
                     plt.colorbar(cf, ax=ax)
-                    contour = ax.contour(Y, X, matrix_disp, levels=class="number">6, colors=class="string">'white', linewidths=class="number">0.8)
-                    ax.clabel(contour, inline=True, fontsize=class="number">8, fmt=class="string">'%.3f')
-                    ax.set_xlabel(class="string">'Угол впрыска [°]')
-                    ax.set_ylabel(class="string">'Диаметр сопел [мм]')
-                    ax.set_title(fclass="string">'{title}\n{z} отверстий')
+                    contour = ax.contour(Y, X, matrix_disp, levels=6, colors='white', linewidths=0.8)
+                    ax.clabel(contour, inline=True, fontsize=8, fmt='%.3f')
+                    ax.set_xlabel(AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code))
+                    ax.set_ylabel(AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code))
+                    ax.set_title(f'{title}\n{self.current_z_code}={z}')
 
                     valid = matrix[~np.isnan(matrix)]
-                    if len(valid) >/ class="number">0:
-                        if param in [class="string">'be', class="string">'NOx.,ppm', class="string">'PM']:
+                    if len(valid) > 0:
+                        if param in ['be', 'NOx.,ppm', 'PM']:
                             opt = np.min(valid)
                         else:
                             opt = np.max(valid)
                         opt_idx = np.where(matrix == opt)
-                        if len(opt_idx[class="number">0]) >/ class="number">0:
-                            ax.plot(Y[opt_idx[class="number">1][class="number">0]], X[opt_idx[class="number">0][class="number">0]], class="string">'r*', markersize=class="number">15)
-                            if opt < class="number">1:
-                                ax.annotate(fclass="string">'{opt:.4f}', (Y[opt_idx[class="number">1][class="number">0]], X[opt_idx[class="number">0][class="number">0]]),
-                                           xytext=(class="number">5, class="number">5), textcoords=class="string">'offset points', fontsize=class="number">9)
+                        if len(opt_idx[0]) > 0:
+                            ax.plot(Y[opt_idx[1][0]], X[opt_idx[0][0]], 'r*', markersize=15)
+                            if opt < 1:
+                                ax.annotate(f'{opt:.4f}', (Y[opt_idx[1][0]], X[opt_idx[0][0]]),
+                                           xytext=(5, 5), textcoords='offset points', fontsize=9)
                             else:
-                                ax.annotate(fclass="string">'{opt:.1f}', (Y[opt_idx[class="number">1][class="number">0]], X[opt_idx[class="number">0][class="number">0]]),
-                                           xytext=(class="number">5, class="number">5), textcoords=class="string">'offset points', fontsize=class="number">9)
+                                ax.annotate(f'{opt:.1f}', (Y[opt_idx[1][0]], X[opt_idx[0][0]]),
+                                           xytext=(5, 5), textcoords='offset points', fontsize=9)
                 else:
-                    ax.text(class="number">0.5, class="number">0.5, class="string">'Нет данных', transform=ax.transAxes, ha=class="string">'center')
-                    ax.set_xlabel(class="string">'Угол впрыска [°]')
-                    ax.set_ylabel(class="string">'Диаметр сопел [мм]')
+                    ax.text(0.5, 0.5, 'Нет данных', transform=ax.transAxes, ha='center')
+                    ax.set_xlabel(AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code))
+                    ax.set_ylabel(AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code))
 
-                param_idx += class="number">1
+                param_idx += 1
 
-            for idx in range(param_idx, class="number">6):
+            for idx in range(param_idx, 6):
                 axes[idx].set_visible(False)
 
-            plt.suptitle(fclass="string">'Параметры двигателя - {z} отверстий', fontsize=class="number">14)
+            plt.suptitle(f'Параметры двигателя - {self.current_z_code}={z}', fontsize=14)
             plt.tight_layout()
             plt.show()
 
-        self.log(class="string">"Отдельные графики построены")
+        self.log("Отдельные графики построены")
 
     def plot_overlay(self):
         if not self.data:
-            self.log(class="string">"Нет данных!", error=True)
+            self.log("Нет данных!", error=True)
             return
 
         selected = [p for p, var in self.check_vars.items() if var.get() and p in self.available_params]
 
         if not selected:
-            self.log(class="string">"Выберите хотя бы один параметр", error=True)
+            self.log("Выберите хотя бы один параметр", error=True)
             return
 
-        self.log(fclass="string">"Наложение параметров: {[DISPLAY_NAMES.get(p, p) for p in selected]}")
+        self.log(f"Наложение параметров: {[DISPLAY_NAMES.get(p, p) for p in selected]}")
 
-        z_list = sorted([z for z in Z_VALUES if z in self.data])
+        z_list = sorted([z for z in self.current_z_values if z in self.data])
 
         for z in z_list:
-            fig, ax = plt.subplots(figsize=(class="number">12, class="number">10))
+            fig, ax = plt.subplots(figsize=(12, 10))
 
             for param in selected:
-                X, Y, matrix = get_matrix(self.data, z, param)
+                X, Y, matrix = get_matrix(self.data, z, param, self.current_x_values, self.current_y_values)
 
                 if matrix is not None and not np.all(np.isnan(matrix)):
                     matrix_disp = np.nan_to_num(matrix)
-                    levels = class="number">6
-                    color = COLORS.get(param, class="string">'black')
+                    levels = 6
+                    color = COLORS.get(param, 'black')
                     contour = ax.contour(Y, X, matrix_disp, levels=levels,
-                                        colors=[color], linewidths=class="number">1.5, alpha=class="number">0.8)
-                    ax.clabel(contour, inline=True, fontsize=class="number">8, fmt=class="string">'%.2f')
+                                        colors=[color], linewidths=1.5, alpha=0.8)
+                    ax.clabel(contour, inline=True, fontsize=8, fmt='%.2f')
 
-            ax.set_xlabel(class="string">'Угол опережения впрыска [°]', fontsize=class="number">12)
-            ax.set_ylabel(class="string">'Диаметр сопловых отверстий [мм]', fontsize=class="number">12)
-            ax.set_title(fclass="string">'Наложение изолиний - {z} отверстий', fontsize=class="number">14)
+            ax.set_xlabel(AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code), fontsize=12)
+            ax.set_ylabel(AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code), fontsize=12)
+            ax.set_title(f'Наложение изолиний - {self.current_z_code}={z}', fontsize=14)
 
             from matplotlib.patches import Patch
-            legend_elements = [Patch(facecolor=COLORS.get(p, class="string">'black'),
-                                    label=DISPLAY_NAMES.get(p, p).split(class="string">'[')[class="number">0].strip())
+            legend_elements = [Patch(facecolor=COLORS.get(p, 'black'),
+                                    label=DISPLAY_NAMES.get(p, p).split('[')[0].strip())
                               for p in selected]
-            ax.legend(handles=legend_elements, loc=class="string">'upper right', fontsize=class="number">10)
-            ax.grid(True, alpha=class="number">0.3)
+            ax.legend(handles=legend_elements, loc='upper right', fontsize=10)
+            ax.grid(True, alpha=0.3)
             plt.tight_layout()
             plt.show()
 
-        self.log(class="string">"Наложение изолиний построено")
+        self.log("Наложение изолиний построено")
 
     def save_json(self):
         if not self.data:
-            self.log(class="string">"Нет данных для сохранения", error=True)
+            self.log("Нет данных для сохранения", error=True)
             return
 
         output = {
-            class="string">'timestamp': datetime.now().strftime(class="string">'%Y-%m-%d %H:%M:%S'),
-            class="string">'x_values': X_VALUES,
-            class="string">'y_values': Y_VALUES,
-            class="string">'z_values': Z_VALUES,
-            class="string">'data': {str(z): points for z, points in self.data.items()}
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'x_param': {'code': self.current_x_code, 'name': AVAILABLE_PARAMS.get(self.current_x_code, self.current_x_code), 'values': self.current_x_values},
+            'y_param': {'code': self.current_y_code, 'name': AVAILABLE_PARAMS.get(self.current_y_code, self.current_y_code), 'values': self.current_y_values},
+            'z_param': {'code': self.current_z_code, 'name': AVAILABLE_PARAMS.get(self.current_z_code, self.current_z_code), 'values': self.current_z_values},
+            'data': {str(z): points for z, points in self.data.items()}
         }
 
-        filename = fclass="string">"optimizer_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"optimizer_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         filepath = os.path.join(BASE_DIR, filename)
 
-        with open(filepath, class="string">'w', encoding=class="string">'utf-class="number">8') as f:
-            json.dump(output, f, indent=class="number">2, ensure_ascii=False)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(output, f, indent=2, ensure_ascii=False)
 
-        self.log(fclass="string">"Данные сохранены: {filename}")
+        self.log(f"Данные сохранены: {filename}")
 
     def open_3d_optimizer(self):
-        class="string">""class="string">"Открывает окно 3D оптимизации"class="string">""
         if not self.data:
-            self.log(class="string">"Сначала загрузите данные!", error=True)
-            messagebox.showwarning(class="string">"Нет данных", class="string">"Сначала загрузите данные (кнопка 'Загрузить данные')")
+            self.log("Сначала загрузите данные!", error=True)
+            messagebox.showwarning("Нет данных", "Сначала загрузите данные (кнопка 'Загрузить данные')")
             return
 
-        self.log(class="string">"Открытие модуля 3D оптимизации...")
+        self.log("Открытие модуля 3D оптимизации...")
 
-        class=class="string">"comment"># Создаем новое окно для 3D оптимизатора
         opt_window = Toplevel(self.root)
-        opt_window.title(class="string">"3D Оптимизатор - Поиск по критериям")
-        opt_window.geometry(class="string">"1400x900")
+        opt_window.title("3D Оптимизатор - Поиск по критериям")
+        opt_window.geometry("1400x900")
 
-        class=class="string">"comment"># Передаем данные в новый оптимизатор
-        ThreeDOptimizer(opt_window, self.data)
+        ThreeDOptimizer(opt_window, self.data, self.current_z_values, self.current_z_code)
 
-class=class="string">"comment"># ========== 3D ОПТИМИЗАТОР (отдельный класс) ==========
+
 class ThreeDOptimizer:
-    def __init__(self, parent, data):
+    def __init__(self, parent, data, z_values, z_code):
         self.parent = parent
         self.root = parent
         self.data = data
+        self.z_values = z_values
+        self.z_code = z_code
 
         self.create_widgets()
-        self.log(class="string">"3D оптимизатор готов. Задайте критерии и нажмите 'Поиск'")
+        self.log("3D оптимизатор готов. Задайте критерии и нажмите 'Поиск'")
 
     def create_widgets(self):
-        main = ttk.Frame(self.root, padding=class="string">"class="number">10")
-        main.pack(fill=class="string">'both', expand=True)
+        main = ttk.Frame(self.root, padding="10")
+        main.pack(fill='both', expand=True)
 
-        class=class="string">"comment"># Верхняя панель
         top_frame = ttk.Frame(main)
-        top_frame.pack(fill=class="string">'x', pady=class="number">5)
+        top_frame.pack(fill='x', pady=5)
 
-        ttk.Button(top_frame, text=class="string">"🔍 Поиск по критериям", command=self.open_criteria_window).pack(side=class="string">'left', padx=class="number">5)
-        ttk.Button(top_frame, text=class="string">"📊 Построить график оптимумов", command=self.plot_optimization_graph).pack(side=class="string">'left', padx=class="number">5)
+        ttk.Button(top_frame, text="🔍 Поиск по критериям", command=self.open_criteria_window).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="📊 Построить график оптимумов", command=self.plot_optimization_graph).pack(side='left', padx=5)
 
-        class=class="string">"comment"># Информация
-        self.info = scrolledtext.ScrolledText(main, height=class="number">6)
-        self.info.pack(fill=class="string">'x', pady=class="number">5)
+        self.info = scrolledtext.ScrolledText(main, height=6)
+        self.info.pack(fill='x', pady=5)
 
-        self.info.delete(class="number">1.0, class="string">'end')
-        self.info.insert(class="string">'end', class="string">"ЗАГРУЖЕННЫЕ ДАННЫЕ:\n")
-        for z in Z_VALUES:
+        self.info.delete(1.0, 'end')
+        self.info.insert('end', "ЗАГРУЖЕННЫЕ ДАННЫЕ:\n")
+        for z in self.z_values:
             if z in self.data:
-                self.info.insert(class="string">'end', fclass="string">"  {z} отверстий: {len(self.data[z])} точек\n")
+                self.info.insert('end', f"  {self.z_code}={z}: {len(self.data[z])} точек\n")
             else:
-                self.info.insert(class="string">'end', fclass="string">"  {z} отверстий: нет данных\n")
+                self.info.insert('end', f"  {self.z_code}={z}: нет данных\n")
 
-        class=class="string">"comment"># Таблица результатов
-        table_frame = ttk.LabelFrame(main, text=class="string">"Результаты оптимизации (отсортированы по расходу топлива)")
-        table_frame.pack(fill=class="string">'both', expand=True, pady=class="number">5)
+        table_frame = ttk.LabelFrame(main, text="Результаты оптимизации (отсортированы по расходу топлива)")
+        table_frame.pack(fill='both', expand=True, pady=5)
 
-        columns = (class="string">'z', class="string">'x', class="string">'y', class="string">'Ne', class="string">'be', class="string">'P_.max', class="string">'Pz', class="string">'NOx.,ppm', class="string">'PM')
-        self.tree = ttk.Treeview(table_frame, columns=columns, show=class="string">'headings', height=class="number">12)
+        columns = ('z', 'x', 'y', 'Ne', 'be', 'P_.max', 'Pz', 'NOx.,ppm', 'PM')
+        self.tree = ttk.Treeview(table_frame, columns=columns, show='headings', height=12)
 
-        self.tree.heading(class="string">'z', text=class="string">'Отверстий')
-        self.tree.heading(class="string">'x', text=class="string">'Диаметр [мм]')
-        self.tree.heading(class="string">'y', text=class="string">'Угол [°]')
-        self.tree.heading(class="string">'Ne', text=class="string">'Мощность [кВт]')
-        self.tree.heading(class="string">'be', text=class="string">'Расход [г/кВт·ч]')
-        self.tree.heading(class="string">'P_.max', text=class="string">'P впрыска [бар]')
-        self.tree.heading(class="string">'Pz', text=class="string">'P цикла [бар]')
-        self.tree.heading(class="string">'NOx.,ppm', text=class="string">'NOx [ppm]')
-        self.tree.heading(class="string">'PM', text=class="string">'PM [г/кВт·ч]')
+        self.tree.heading('z', text=self.z_code)
+        self.tree.heading('x', text='Параметр X')
+        self.tree.heading('y', text='Параметр Y')
+        self.tree.heading('Ne', text='Мощность [кВт]')
+        self.tree.heading('be', text='Расход [г/кВт·ч]')
+        self.tree.heading('P_.max', text='P впрыска [бар]')
+        self.tree.heading('Pz', text='P цикла [бар]')
+        self.tree.heading('NOx.,ppm', text='NOx [ppm]')
+        self.tree.heading('PM', text='PM [г/кВт·ч]')
 
         for col in columns:
-            self.tree.column(col, width=class="number">100)
+            self.tree.column(col, width=100)
 
         scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
 
-        self.tree.pack(side=tk.LEFT, fill=class="string">'both', expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=class="string">'y')
+        self.tree.pack(side=tk.LEFT, fill='both', expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill='y')
 
-        class=class="string">"comment"># Лог
-        log_frame = ttk.LabelFrame(main, text=class="string">"Лог")
-        log_frame.pack(fill=class="string">'x', pady=class="number">5)
+        log_frame = ttk.LabelFrame(main, text="Лог")
+        log_frame.pack(fill='x', pady=5)
 
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=class="number">8)
-        self.log_text.pack(fill=class="string">'both', expand=True, padx=class="number">5, pady=class="number">5)
+        self.log_text = scrolledtext.ScrolledText(log_frame, height=8)
+        self.log_text.pack(fill='both', expand=True, padx=5, pady=5)
 
     def log(self, msg, error=False):
-        timestamp = datetime.now().strftime(class="string">"%H:%M:%S")
-        prefix = class="string">"❌" if error else class="string">"✓"
-        self.log_text.insert(class="string">'end', fclass="string">"[{timestamp}] {prefix} {msg}\n")
-        self.log_text.see(class="string">'end')
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        prefix = "❌" if error else "✓"
+        self.log_text.insert('end', f"[{timestamp}] {prefix} {msg}\n")
+        self.log_text.see('end')
         self.root.update()
 
     def open_criteria_window(self):
         criteria_win = Toplevel(self.root)
-        criteria_win.title(class="string">"Задание критериев отбора")
-        criteria_win.geometry(class="string">"600x500")
+        criteria_win.title("Задание критериев отбора")
+        criteria_win.geometry("600x500")
         criteria_win.transient(self.root)
         criteria_win.grab_set()
 
-        ttk.Label(criteria_win, text=class="string">"Задайте допустимые диапазоны для каждого параметра",
-                  font=(class="string">'Arial', class="number">12)).pack(pady=class="number">10)
+        ttk.Label(criteria_win, text="Задайте допустимые диапазоны для каждого параметра",
+                  font=('Arial', 12)).pack(pady=10)
 
-        frame = ttk.Frame(criteria_win, padding=class="string">"class="number">10")
-        frame.pack(fill=class="string">'both', expand=True)
+        frame = ttk.Frame(criteria_win, padding="10")
+        frame.pack(fill='both', expand=True)
 
         entries = {}
 
         for i, (param, info) in enumerate(PARAM_CRITERIA.items()):
             row_frame = ttk.Frame(frame)
-            row_frame.pack(fill=class="string">'x', pady=class="number">5)
+            row_frame.pack(fill='x', pady=5)
 
-            ttk.Label(row_frame, text=info[class="string">'name'], width=class="number">25).pack(side=class="string">'left')
+            ttk.Label(row_frame, text=info['name'], width=25).pack(side='left')
 
-            min_entry = ttk.Entry(row_frame, width=class="number">10)
-            min_entry.insert(class="number">0, str(info[class="string">'min']))
-            min_entry.pack(side=class="string">'left', padx=class="number">5)
-            ttk.Label(row_frame, text=class="string">"до").pack(side=class="string">'left')
+            min_entry = ttk.Entry(row_frame, width=10)
+            min_entry.insert(0, str(info['min']))
+            min_entry.pack(side='left', padx=5)
+            ttk.Label(row_frame, text="до").pack(side='left')
 
-            max_entry = ttk.Entry(row_frame, width=class="number">10)
-            max_entry.insert(class="number">0, str(info[class="string">'max']))
-            max_entry.pack(side=class="string">'left', padx=class="number">5)
-            ttk.Label(row_frame, text=info[class="string">'unit']).pack(side=class="string">'left')
+            max_entry = ttk.Entry(row_frame, width=10)
+            max_entry.insert(0, str(info['max']))
+            max_entry.pack(side='left', padx=5)
+            ttk.Label(row_frame, text=info['unit']).pack(side='left')
 
             entries[param] = (min_entry, max_entry)
 
         btn_frame = ttk.Frame(criteria_win)
-        btn_frame.pack(pady=class="number">20)
+        btn_frame.pack(pady=20)
 
         def apply_criteria():
             criteria = {}
@@ -630,20 +748,20 @@ class ThreeDOptimizer:
             criteria_win.destroy()
             self.run_optimization(criteria)
 
-        ttk.Button(btn_frame, text=class="string">"🔍 Найти оптимальные варианты", command=apply_criteria).pack(side=class="string">'left', padx=class="number">10)
-        ttk.Button(btn_frame, text=class="string">"Отмена", command=criteria_win.destroy).pack(side=class="string">'left', padx=class="number">10)
+        ttk.Button(btn_frame, text="🔍 Найти оптимальные варианты", command=apply_criteria).pack(side='left', padx=10)
+        ttk.Button(btn_frame, text="Отмена", command=criteria_win.destroy).pack(side='left', padx=10)
 
     def run_optimization(self, criteria):
-        self.log(class="string">"Запуск оптимизации по заданным критериям...")
+        self.log("Запуск оптимизации по заданным критериям...")
 
         all_points = []
         for z, points in self.data.items():
             for point in points:
                 point_with_z = point.copy()
-                point_with_z[class="string">'z'] = z
+                point_with_z['z'] = z
                 all_points.append(point_with_z)
 
-        self.log(fclass="string">"Всего точек для анализа: {len(all_points)}")
+        self.log(f"Всего точек для анализа: {len(all_points)}")
 
         valid_points = []
         for point in all_points:
@@ -651,7 +769,7 @@ class ThreeDOptimizer:
             for param, (min_val, max_val) in criteria.items():
                 if param in point:
                     val = point[param]
-                    if val < min_val or val >/ max_val:
+                    if val < min_val or val > max_val:
                         valid = False
                         break
                 else:
@@ -661,119 +779,115 @@ class ThreeDOptimizer:
             if valid:
                 valid_points.append(point)
 
-        self.log(fclass="string">"Найдено вариантов, удовлетворяющих критериям: {len(valid_points)}")
+        self.log(f"Найдено вариантов, удовлетворяющих критериям: {len(valid_points)}")
 
         if not valid_points:
-            self.log(class="string">"Нет вариантов, удовлетворяющих заданным критериям!", error=True)
-            messagebox.showwarning(class="string">"Нет результатов", class="string">"Нет вариантов, удовлетворяющих заданным критериям!\nРасширьте диапазоны параметров.")
+            self.log("Нет вариантов, удовлетворяющих заданным критериям!", error=True)
+            messagebox.showwarning("Нет результатов", "Нет вариантов, удовлетворяющих заданным критериям!\nРасширьте диапазоны параметров.")
             return
 
-        valid_points.sort(key=lambda x: x.get(class="string">'be', float(class="string">'inf')))
+        valid_points.sort(key=lambda x: x.get('be', float('inf')))
 
         for item in self.tree.get_children():
             self.tree.delete(item)
 
         for point in valid_points:
             values = (
-                point.get(class="string">'z', class="string">'-'),
-                point.get(class="string">'x', class="string">'-'),
-                point.get(class="string">'y', class="string">'-'),
-                fclass="string">"{point.get('Ne', class="number">0):.1f}",
-                fclass="string">"{point.get('be', class="number">0):.2f}",
-                fclass="string">"{point.get('P_.max', class="number">0):.0f}",
-                fclass="string">"{point.get('Pz', class="number">0):.1f}",
-                fclass="string">"{point.get('NOx.,ppm', class="number">0):.0f}",
-                fclass="string">"{point.get('PM', class="number">0):.4f}"
+                point.get('z', '-'),
+                f"{point.get('x', 0):.3f}",
+                f"{point.get('y', 0):.1f}",
+                f"{point.get('Ne', 0):.1f}",
+                f"{point.get('be', 0):.2f}",
+                f"{point.get('P_.max', 0):.0f}",
+                f"{point.get('Pz', 0):.1f}",
+                f"{point.get('NOx.,ppm', 0):.0f}",
+                f"{point.get('PM', 0):.4f}"
             )
-            self.tree.insert(class="string">'', tk.END, values=values)
+            self.tree.insert('', tk.END, values=values)
 
-        self.log(fclass="string">"Результаты выведены в таблицу. Наилучший расход: {valid_points[class="number">0].get('be', class="number">0):.2f} г/кВт·ч")
+        self.log(f"Результаты выведены в таблицу. Наилучший расход: {valid_points[0].get('be', 0):.2f} г/кВт·ч")
 
         self.last_valid_points = valid_points
         self.last_criteria = criteria
 
-        if messagebox.askyesno(class="string">"График", class="string">"Построить график оптимальных областей?"):
+        if messagebox.askyesno("График", "Построить график оптимальных областей?"):
             self.plot_optimization_graph()
 
     def plot_optimization_graph(self):
-        if not hasattr(self, class="string">'last_valid_points') or not self.last_valid_points:
-            self.log(class="string">"Нет данных для построения графика. Сначала выполните поиск!", error=True)
+        if not hasattr(self, 'last_valid_points') or not self.last_valid_points:
+            self.log("Нет данных для построения графика. Сначала выполните поиск!", error=True)
             return
+
         valid_points = self.last_valid_points
 
-        fig = plt.figure(figsize=(class="number">16, class="number">10))
+        fig = plt.figure(figsize=(16, 10))
 
-        class=class="string">"comment"># График class="number">1: Разброс точек по всем параметрам
-        ax1 = fig.add_subplot(class="number">2, class="number">2, class="number">1)
-        colors_list = [class="string">'blue', class="string">'red', class="string">'green', class="string">'orange', class="string">'purple']
-        z_list = sorted(set(p[class="string">'z'] for p in valid_points))
+        ax1 = fig.add_subplot(2, 2, 1)
+        colors_list = ['blue', 'red', 'green', 'orange', 'purple']
+        z_list = sorted(set(p['z'] for p in valid_points))
 
         for idx, z in enumerate(z_list):
-            z_points = [p for p in valid_points if p[class="string">'z'] == z]
-            be_vals = [p[class="string">'be'] for p in z_points]
-            ne_vals = [p[class="string">'Ne'] for p in z_points]
-            ax1.scatter(be_vals, ne_vals, c=colors_list[idx % len(colors_list)], label=fclass="string">'{z} отв.', s=class="number">50, alpha=class="number">0.7)
+            z_points = [p for p in valid_points if p['z'] == z]
+            be_vals = [p['be'] for p in z_points]
+            ne_vals = [p['Ne'] for p in z_points]
+            ax1.scatter(be_vals, ne_vals, c=colors_list[idx % len(colors_list)], label=f'{self.z_code}={z}', s=50, alpha=0.7)
 
-        ax1.set_xlabel(class="string">'Расход топлива be [г/кВт·ч]')
-        ax1.set_ylabel(class="string">'Мощность Ne [кВт]')
-        ax1.set_title(class="string">'Зависимость мощности от расхода топлива')
+        ax1.set_xlabel('Расход топлива be [г/кВт·ч]')
+        ax1.set_ylabel('Мощность Ne [кВт]')
+        ax1.set_title('Зависимость мощности от расхода топлива')
         ax1.legend()
-        ax1.grid(True, alpha=class="number">0.3)
+        ax1.grid(True, alpha=0.3)
 
-        class=class="string">"comment"># График class="number">2: Зависимость NOx от расхода
-        ax2 = fig.add_subplot(class="number">2, class="number">2, class="number">2)
+        ax2 = fig.add_subplot(2, 2, 2)
 
         for idx, z in enumerate(z_list):
-            z_points = [p for p in valid_points if p[class="string">'z'] == z]
-            be_vals = [p[class="string">'be'] for p in z_points]
-            nox_vals = [p.get(class="string">'NOx.,ppm', class="number">0) for p in z_points]
-            ax2.scatter(be_vals, nox_vals, c=colors_list[idx % len(colors_list)], label=fclass="string">'{z} отв.', s=class="number">50, alpha=class="number">0.7)
+            z_points = [p for p in valid_points if p['z'] == z]
+            be_vals = [p['be'] for p in z_points]
+            nox_vals = [p.get('NOx.,ppm', 0) for p in z_points]
+            ax2.scatter(be_vals, nox_vals, c=colors_list[idx % len(colors_list)], label=f'{self.z_code}={z}', s=50, alpha=0.7)
 
-        ax2.set_xlabel(class="string">'Расход топлива be [г/кВт·ч]')
-        ax2.set_ylabel(class="string">'Выбросы NOx [ppm]')
-        ax2.set_title(class="string">'Зависимость NOx от расхода топлива')
+        ax2.set_xlabel('Расход топлива be [г/кВт·ч]')
+        ax2.set_ylabel('Выбросы NOx [ppm]')
+        ax2.set_title('Зависимость NOx от расхода топлива')
         ax2.legend()
-        ax2.grid(True, alpha=class="number">0.3)
+        ax2.grid(True, alpha=0.3)
 
-        class=class="string">"comment"># График class="number">3: 3D график
-        ax3 = fig.add_subplot(class="number">2, class="number">2, class="number">3, projection=class="string">'3d')
+        ax3 = fig.add_subplot(2, 2, 3, projection='3d')
 
         for idx, z in enumerate(z_list):
-            z_points = [p for p in valid_points if p[class="string">'z'] == z]
-            ne_vals = [p[class="string">'Ne'] for p in z_points]
-            be_vals = [p[class="string">'be'] for p in z_points]
-            nox_vals = [p.get(class="string">'NOx.,ppm', class="number">0) for p in z_points]
-            ax3.scatter(ne_vals, be_vals, nox_vals, c=colors_list[idx % len(colors_list)], label=fclass="string">'{z} отв.', s=class="number">50, alpha=class="number">0.7)
+            z_points = [p for p in valid_points if p['z'] == z]
+            ne_vals = [p['Ne'] for p in z_points]
+            be_vals = [p['be'] for p in z_points]
+            nox_vals = [p.get('NOx.,ppm', 0) for p in z_points]
+            ax3.scatter(ne_vals, be_vals, nox_vals, c=colors_list[idx % len(colors_list)], label=f'{self.z_code}={z}', s=50, alpha=0.7)
 
-        ax3.set_xlabel(class="string">'Мощность Ne [кВт]')
-        ax3.set_ylabel(class="string">'Расход be [г/кВт·ч]')
-        ax3.set_zlabel(class="string">'NOx [ppm]')
-        ax3.set_title(class="string">'3D зависимость параметров')
+        ax3.set_xlabel('Мощность Ne [кВт]')
+        ax3.set_ylabel('Расход be [г/кВт·ч]')
+        ax3.set_zlabel('NOx [ppm]')
+        ax3.set_title('3D зависимость параметров')
         ax3.legend()
 
-        class=class="string">"comment"># График class="number">4: Сравнение давлений
-        ax4 = fig.add_subplot(class="number">2, class="number">2, class="number">4)
+        ax4 = fig.add_subplot(2, 2, 4)
 
         for idx, z in enumerate(z_list):
-            z_points = [p for p in valid_points if p[class="string">'z'] == z]
-            p_inj_vals = [p.get(class="string">'P_.max', class="number">0) for p in z_points]
-            pz_vals = [p.get(class="string">'Pz', class="number">0) for p in z_points]
-            ax4.scatter(p_inj_vals, pz_vals, c=colors_list[idx % len(colors_list)], label=fclass="string">'{z} отв.', s=class="number">50, alpha=class="number">0.7)
+            z_points = [p for p in valid_points if p['z'] == z]
+            p_inj_vals = [p.get('P_.max', 0) for p in z_points]
+            pz_vals = [p.get('Pz', 0) for p in z_points]
+            ax4.scatter(p_inj_vals, pz_vals, c=colors_list[idx % len(colors_list)], label=f'{self.z_code}={z}', s=50, alpha=0.7)
 
-        ax4.set_xlabel(class="string">'Давление впрыска P_впр [бар]')
-        ax4.set_ylabel(class="string">'Давление цикла Pz [бар]')
-        ax4.set_title(class="string">'Зависимость давлений')
+        ax4.set_xlabel('Давление впрыска P_впр [бар]')
+        ax4.set_ylabel('Давление цикла Pz [бар]')
+        ax4.set_title('Зависимость давлений')
         ax4.legend()
-        ax4.grid(True, alpha=class="number">0.3)
+        ax4.grid(True, alpha=0.3)
 
-        plt.suptitle(class="string">'Оптимальные режимы работы двигателя', fontsize=class="number">16)
+        plt.suptitle('Оптимальные режимы работы двигателя', fontsize=16)
         plt.tight_layout()
         plt.show()
-        self.log(class="string">"Графики построены")
+        self.log("Графики построены")
 
-class=class="string">"comment"># ========== ЗАПУСК ==========
-if __name__ == class="string">"__main__":
+
+if __name__ == "__main__":
     root = tk.Tk()
     app = MainOptimizerApp(root)
     root.mainloop()
-
